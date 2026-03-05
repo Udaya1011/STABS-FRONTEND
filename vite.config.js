@@ -7,15 +7,15 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5006',
+        target: process.env.VITE_API_URL || 'https://stabs-backend-1.onrender.com', // Defaults to Render, but can be overridden by local env
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://127.0.0.1:5006',
+        target: process.env.VITE_API_URL || 'https://stabs-backend-1.onrender.com',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://127.0.0.1:5006',
+        target: process.env.VITE_API_URL || 'https://stabs-backend-1.onrender.com',
         ws: true,
         changeOrigin: true,
       },
