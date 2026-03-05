@@ -25,8 +25,8 @@ const Teachers = () => {
     }, [dispatch]);
 
     const filteredTeachers = teachers.filter(t =>
-        t.user?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.designation?.toLowerCase().includes(searchQuery.toLowerCase())
+    (t.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.designation?.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     const handleOpenModal = (t = null) => {

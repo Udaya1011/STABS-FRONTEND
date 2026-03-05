@@ -11,6 +11,7 @@ const Departments = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [selectedDep, setSelectedDep] = useState(null);
     const [showSidePanel, setShowSidePanel] = useState(false);
+    const [currentDep, setCurrentDep] = useState({ name: '', code: '', blocks: '', classrooms: '', description: '' });
 
     const handleView = (dep) => {
         setSelectedDep(dep);
