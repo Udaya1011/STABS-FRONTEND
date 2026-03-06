@@ -4,24 +4,46 @@ import { Search, Mail, MapPin, Calendar, Star, ChevronRight, GraduationCap, Plus
 import { motion, AnimatePresence } from 'framer-motion';
 import { getTeachers, updateTeacher, deleteTeacher, registerTeacher } from '../store/slices/teacherSlice';
 import { getDepartments } from '../store/slices/departmentSlice';
+import { getSubjects } from '../store/slices/subjectSlice';
 import { toast } from 'react-hot-toast';
+import axios from 'axios';
 
 const Teachers = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showModal, setShowModal] = useState(false);
+    const [showTimetableModal, setShowTimetableModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentTeacher, setCurrentTeacher] = useState({
         name: '', email: '', password: '', designation: '', department: '', qualifications: '', officeHours: ''
     });
+    const [timetable, setTimetable] = useState([]);
+    
+    const generateEmptySchedule = () => {
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const defaultTimes = [
+            { start: '09:00', end: '09:50' },
+            { start: '09:50', end: '10:40' },
+            { start: '10:50', end: '11:40' },
+            { start: '11:40', end: '12:30' },
+            { start: '13:30', end: '14:20' },
+            { start: '14:20', end: '15:10' }
+        ];
+        return days.map(day => ({
+            day,
+            slots: defaultTimes.map(time => ({ ...time, isBooked: false, subject: '' }))
+        }));
+    };
 
     const dispatch = useDispatch();
     const { teachers, isLoading } = useSelector((state) => state.teachers);
     const { departments } = useSelector((state) => state.departments);
+    const { subjects } = useSelector((state) => state.subjects);
     const { user } = useSelector((state) => state.auth);
 
     useEffect(() => {
         dispatch(getTeachers());
         dispatch(getDepartments());
+        dispatch(getSubjects());
     }, [dispatch]);
 
     const filteredTeachers = teachers.filter(t =>
@@ -79,6 +101,58 @@ const Teachers = () => {
         }
     };
 
+    const handleOpenTimetableModal = (t) => {
+        setCurrentTeacher(t);
+        // Deep clone the availability array to avoid direct mutation of the teacher object
+        const initialTimetable = t.availability?.length > 0 
+            ? JSON.parse(JSON.stringify(t.availability)) 
+            : generateEmptySchedule();
+        setTimetable(initialTimetable);
+        setShowTimetableModal(true);
+    };
+
+    const handleSaveTimetable = async (e) => {
+        e.preventDefault();
+        try {
+            const storedUser = JSON.parse(localStorage.getItem('user'));
+            const token = storedUser?.token || user?.token;
+            if (!token) {
+                toast.error('Not authenticated. Please log in again.');
+                return;
+            }
+
+            // Clean the data: convert empty strings to null for subject ID
+            const cleanedTimetable = timetable.map(day => ({
+                ...day,
+                slots: day.slots.map(slot => ({
+                    ...slot,
+                    subject: slot.subject === '' ? null : slot.subject
+                }))
+            }));
+
+            await axios.put(
+                `/api/teachers/${currentTeacher._id}/timetable`,
+                { availability: cleanedTimetable },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            toast.success('Timetable saved successfully!');
+            setShowTimetableModal(false);
+            dispatch(getTeachers());
+        } catch (error) {
+            console.error('Timetable save error:', error?.response || error);
+            const errorMsg = error?.response?.data?.error || error?.response?.data?.message || 'Failed to save timetable';
+            toast.error(errorMsg);
+        }
+    };
+
+    const handleTimeChange = (dayIndex, slotIndex, type, value) => {
+        setTimetable(prev => {
+            const newTimetable = JSON.parse(JSON.stringify(prev));
+            newTimetable[dayIndex].slots[slotIndex][type] = value;
+            return newTimetable;
+        });
+    };
+
     return (
         <div className="space-y-8 pb-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -123,6 +197,7 @@ const Teachers = () => {
                         >
                             {user?.role === 'admin' && (
                                 <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                    <button onClick={() => handleOpenTimetableModal(teacher)} className="p-2 bg-white text-secondary-400 rounded-xl hover:text-accent-blue shadow-sm border border-secondary-100 active:scale-90" title="Manage Timetable"><Calendar size={14} /></button>
                                     <button onClick={() => handleOpenModal(teacher)} className="p-2 bg-white text-secondary-400 rounded-xl hover:text-primary-600 shadow-sm border border-secondary-100 active:scale-90"><Edit2 size={14} /></button>
                                     <button onClick={() => handleDelete(teacher._id)} className="p-2 bg-white text-secondary-400 rounded-xl hover:text-red-500 shadow-sm border border-secondary-100 active:scale-90"><Trash2 size={14} /></button>
                                 </div>
@@ -168,15 +243,25 @@ const Teachers = () => {
                                 </div>
                             </div>
 
-                            <div className="pt-6 border-t border-secondary-50 transition-colors flex items-center justify-between">
-                                <div className="flex items-center gap-1.5">
-                                    <Star size={16} className="text-yellow-400 fill-yellow-400" />
-                                    <span className="text-sm font-bold text-secondary-700 transition-colors">4.9</span>
-                                    <span className="text-[10px] text-secondary-400 font-black tracking-widest uppercase transition-colors">(12 REVIEWS)</span>
+                            <div className="pt-6 border-t border-secondary-50 transition-colors flex flex-col gap-3">
+                                <div className="flex items-center justify-between w-full">
+                                    <div className="flex items-center gap-1.5">
+                                        <Star size={16} className="text-yellow-400 fill-yellow-400" />
+                                        <span className="text-sm font-bold text-secondary-700 transition-colors">4.9</span>
+                                        <span className="text-[10px] text-secondary-400 font-black tracking-widest uppercase transition-colors">(12 REVIEWS)</span>
+                                    </div>
+                                    <button className="flex items-center text-primary-600 font-bold text-sm group/btn uppercase tracking-widest text-[10px] transition-colors">
+                                        Profile <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform ml-1" />
+                                    </button>
                                 </div>
-                                <button className="flex items-center text-primary-600 font-bold text-sm group/btn uppercase tracking-widest text-[10px] transition-colors">
-                                    Profile <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform ml-1" />
-                                </button>
+                                {user?.role === 'admin' && (
+                                    <button 
+                                        onClick={() => handleOpenTimetableModal(teacher)} 
+                                        className="w-full py-2.5 bg-accent-blue/10 hover:bg-accent-blue/20 text-accent-blue rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-accent-blue/20"
+                                    >
+                                        <Calendar size={14} /> Add / Manage Timetable
+                                    </button>
+                                )}
                             </div>
                         </motion.div>
                     ))
@@ -278,6 +363,87 @@ const Teachers = () => {
                                     <button type="submit" className="btn-primary flex items-center gap-2 px-10 shadow-lg shadow-primary-500/20 font-black uppercase tracking-widest text-[10px]">
                                         <Save size={18} />
                                         {isEditing ? 'Propagate Changes' : 'Initialize Account'}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Timetable Modal */}
+            <AnimatePresence>
+                {showTimetableModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowTimetableModal(false)}
+                            className="absolute inset-0 bg-secondary-900/40 backdrop-blur-sm"
+                        ></motion.div>
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden relative z-10 border border-secondary-100 flex flex-col max-h-[90vh]"
+                        >
+                            <div className="px-6 py-4 bg-secondary-50 border-b border-secondary-100 flex items-center justify-between transition-colors shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-1.5 bg-accent-blue text-white rounded-lg"><Calendar size={16} /></div>
+                                    <h2 className="text-lg font-bold text-secondary-900 uppercase tracking-tight transition-colors">
+                                        Timetable - {currentTeacher?.user?.name || currentTeacher?.name}
+                                    </h2>
+                                </div>
+                                <button onClick={() => setShowTimetableModal(false)} className="p-2 text-secondary-400 hover:text-secondary-600 rounded-xl transition-all font-bold uppercase text-xs">✕</button>
+                            </div>
+
+                            <form onSubmit={handleSaveTimetable} className="flex flex-col overflow-hidden min-h-0">
+                                <div className="p-4 overflow-y-auto space-y-2 flex-1 min-h-0">
+                                    <div className="overflow-x-auto bg-white rounded-xl border border-secondary-100 shadow-sm">
+                                        <table className="w-full text-left border-collapse min-w-[700px]">
+                                            <thead>
+                                                <tr className="bg-secondary-50 border-b border-secondary-100">
+                                                    <th className="p-2 text-[10px] font-bold text-secondary-500 uppercase tracking-widest text-center border-r border-secondary-100 w-24">Day</th>
+                                                    {[1,2,3,4,5,6].map(p => (
+                                                        <th key={p} className="p-2 text-[10px] font-bold text-secondary-500 uppercase tracking-widest text-center border-r border-secondary-100 last:border-0 w-32">Period {p}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {timetable.map((daySchedule, dayIndex) => (
+                                                    <tr key={daySchedule.day} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/50 transition-colors">
+                                                        <td className="p-2 border-r border-secondary-100 align-middle">
+                                                            <div className="font-bold text-secondary-900 uppercase tracking-wider text-[10px] text-center">{daySchedule.day}</div>
+                                                        </td>
+                                                        {daySchedule.slots.map((slot, slotIndex) => (
+                                                            <td key={slotIndex} className="p-1 px-2 border-r border-secondary-100 last:border-0 align-middle">
+                                                                <select
+                                                                    className="w-full text-[10px] py-1.5 px-1 bg-transparent border border-transparent rounded hover:bg-white hover:border-secondary-200 focus:bg-white focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-all cursor-pointer font-medium text-secondary-700 text-center truncate"
+                                                                    value={slot.subject || ''}
+                                                                    onChange={(e) => {
+                                                                        handleTimeChange(dayIndex, slotIndex, 'subject', e.target.value);
+                                                                        handleTimeChange(dayIndex, slotIndex, 'isBooked', !!e.target.value);
+                                                                    }}
+                                                                >
+                                                                    <option value="" className="text-secondary-400 font-normal">-- Free --</option>
+                                                                    {subjects?.map(sub => (
+                                                                        <option key={sub._id} value={sub._id}>{sub.name}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div className="p-4 border-t border-secondary-100 bg-white flex justify-end gap-3 shrink-0">
+                                    <button type="button" onClick={() => setShowTimetableModal(false)} className="btn-secondary px-6 font-black uppercase tracking-widest text-[10px]">Discard</button>
+                                    <button type="submit" className="btn-primary flex items-center gap-2 px-8 shadow-lg shadow-primary-500/20 font-black uppercase tracking-widest text-[10px]">
+                                        <Save size={16} />
+                                        Save Timetable
                                     </button>
                                 </div>
                             </form>

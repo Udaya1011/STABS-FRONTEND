@@ -19,6 +19,7 @@ const Chat = () => {
     const [uploading, setUploading] = useState(false);
     const [selectedMessageDetails, setSelectedMessageDetails] = useState(null);
     const [showProfileModal, setShowProfileModal] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const fileInputRef = useRef(null);
     const messagesEndRef = useRef(null);
 
@@ -138,6 +139,7 @@ const Chat = () => {
         })).filter(c => c.id !== user?._id);
 
     const activeContacts = (user?.role === 'student' ? staffContacts : [...staffContacts, ...studentContacts])
+        .filter(contact => contact.name.toLowerCase().includes(searchQuery.toLowerCase()) || contact.role.toLowerCase().includes(searchQuery.toLowerCase()))
         .sort((a, b) => {
             const timeA = new Date(unreadCounts[a.id]?.lastMessageTime || 0).getTime();
             const timeB = new Date(unreadCounts[b.id]?.lastMessageTime || 0).getTime();
@@ -194,6 +196,8 @@ const Chat = () => {
                         <input
                             type="text"
                             placeholder="Search directory..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 bg-white border border-secondary-200 rounded-xl text-xs font-bold uppercase tracking-wider focus:ring-2 focus:ring-primary-500 transition-all shadow-sm text-secondary-900"
                         />
                     </div>
@@ -219,9 +223,18 @@ const Chat = () => {
                                 <div className="flex justify-between items-center mb-0.5">
                                     <h4 className={`font-bold text-sm truncate uppercase tracking-tight ${userId === contact.id ? 'text-primary-600' : 'text-secondary-900'}`}>{contact.name}</h4>
                                     {unreadCounts[contact.id]?.count > 0 && (
-                                        <span className="w-5 h-5 bg-primary-600 text-white text-[10px] font-black rounded-full flex items-center justify-center animate-bounce shadow-lg shadow-primary-500/20">
-                                            {unreadCounts[contact.id].count}
-                                        </span>
+                                        <div className="relative flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                            <div
+                                                style={{ backgroundColor: '#892020ff' }}
+                                                className="absolute inset-0 rounded-full blur-[6px] opacity-40 animate-pulse"
+                                            ></div>
+                                            <div
+                                                style={{ background: 'linear-gradient(135deg, #ff4141 0%, #900c0c 100%)' }}
+                                                className="w-6 h-6 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-xl border-[1.5px] border-white relative z-10 leading-none"
+                                            >
+                                                {unreadCounts[contact.id].count}
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                                 <p className="text-[10px] text-secondary-400 font-bold uppercase tracking-widest truncate transition-colors">{contact.role}</p>
@@ -446,8 +459,10 @@ const Chat = () => {
                             <MessageSquare size={44} />
                         </div>
                         <h2 className="text-3xl font-bold text-secondary-900 uppercase tracking-tight transition-colors">Academic Connectivity</h2>
-                        <p className="text-secondary-500 max-w-sm mt-3 mx-auto font-medium leading-relaxed transition-colors">Select a facilitator from the directory to initiate a secure, high-priority communication channel.</p>
-                        <button className="mt-10 btn-primary px-10 py-4 shadow-xl shadow-primary-600/20 uppercase tracking-widest text-xs font-black transition-all">Open Staff Directory</button>
+                        <p className="text-secondary-500 max-w-sm mt-3 mx-auto font-medium leading-relaxed transition-colors">Select a contact from the directory to initiate a secure, high-priority communication channel.</p>
+                        <button onClick={() => navigate(user?.role === 'student' ? '/teachers' : '/students')} className="mt-10 btn-primary px-10 py-4 shadow-xl shadow-primary-600/20 uppercase tracking-widest text-xs font-black transition-all">
+                            Open {user?.role === 'student' ? 'Staff' : 'Student'} Directory
+                        </button>
                     </div>
                 </div>
             )}

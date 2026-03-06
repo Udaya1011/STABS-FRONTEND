@@ -36,7 +36,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         { name: 'Teachers', icon: Users, path: '/teachers', roles: ['admin', 'teacher', 'student'] },
         { name: 'Students', icon: GraduationCap, path: '/students', roles: ['admin', 'teacher'] },
         { name: 'Appointments', icon: Calendar, path: '/appointments', roles: ['admin', 'teacher', 'student'] },
-        { name: 'Messages', icon: MessageSquare, path: '/chat', roles: ['teacher', 'student'] },
+        { name: 'Messages', icon: MessageSquare, path: '/chat', roles: ['admin', 'teacher', 'student'] },
         { name: 'Resources', icon: Video, path: '/videos', roles: ['admin', 'teacher', 'student'] },
         { name: 'My Profile', icon: User, path: '/profile', roles: ['admin', 'teacher', 'student'] },
     ];

@@ -5,14 +5,15 @@ const API_URL = '/api/teachers';
 
 const initialState = {
     teachers: [],
+    currentTeacherProfile: null,
     isLoading: false,
     isError: false,
     message: '',
 };
 
 const getAuthHeader = (thunkAPI) => {
-    const user = thunkAPI.getState().auth.user;
-    const token = user?.token;
+    const state = thunkAPI.getState();
+    const token = state.auth.user?.token;
     if (token) {
         return { headers: { Authorization: `Bearer ${token}` } };
     }
@@ -24,6 +25,14 @@ export const getTeachers = createAsyncThunk('teachers/getAll', async (_, thunkAP
         return (await axios.get(API_URL, getAuthHeader(thunkAPI))).data;
     } catch (error) {
         return thunkAPI.rejectWithValue(error.response?.data?.message || 'Failed to fetch teachers');
+    }
+});
+
+export const getMyProfile = createAsyncThunk('teachers/getMyProfile', async (_, thunkAPI) => {
+    try {
+        return (await axios.get(`${API_URL}/profile`, getAuthHeader(thunkAPI))).data;
+    } catch (error) {
+        return thunkAPI.rejectWithValue(error.response?.data?.message || 'Failed to fetch profile');
     }
 });
 
@@ -54,6 +63,22 @@ export const registerTeacher = createAsyncThunk('teachers/register', async (teac
     }
 });
 
+export const updateMyAvailability = createAsyncThunk('teachers/updateAvailability', async (availability, thunkAPI) => {
+    try {
+        return (await axios.put(`${API_URL}/availability`, { availability }, getAuthHeader(thunkAPI))).data;
+    } catch (error) {
+        return thunkAPI.rejectWithValue(error.response?.data?.message || 'Failed to update availability');
+    }
+});
+
+export const syncMyFreeSlots = createAsyncThunk('teachers/syncSlots', async (_, thunkAPI) => {
+    try {
+        return (await axios.post(`${API_URL}/sync-slots`, {}, getAuthHeader(thunkAPI))).data;
+    } catch (error) {
+        return thunkAPI.rejectWithValue(error.response?.data?.message || 'Failed to sync free slots');
+    }
+});
+
 export const teacherSlice = createSlice({
     name: 'teachers',
     initialState,
@@ -80,6 +105,23 @@ export const teacherSlice = createSlice({
                 state.isLoading = false;
                 const index = state.teachers.findIndex(t => t._id === action.payload._id);
                 if (index !== -1) state.teachers[index] = action.payload;
+            })
+            .addCase(getMyProfile.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.currentTeacherProfile = action.payload;
+            })
+            .addCase(updateMyAvailability.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.currentTeacherProfile = action.payload;
+                // Also update in teachers list if present
+                const index = state.teachers.findIndex(t => t._id === action.payload._id);
+                if (index !== -1) state.teachers[index] = action.payload;
+            })
+            .addCase(syncMyFreeSlots.pending, (state) => { state.isLoading = true; })
+            .addCase(syncMyFreeSlots.fulfilled, (state) => { state.isLoading = false; })
+            .addCase(syncMyFreeSlots.rejected, (state, action) => {
+                state.isLoading = false;
+                state.message = action.payload;
             });
     },
 });

@@ -120,20 +120,33 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                                     <p className="text-xs font-bold text-secondary-400 uppercase tracking-[0.2em]">Silence across grid</p>
                                                 </div>
                                             ) : (
-                                                <div className="space-y-1">
+                                                <div className="space-y-3">
                                                     {Object.entries(unreadCounts).map(([senderId, data]) => data.count > 0 && (
                                                         <div
                                                             key={`msg-${senderId}`}
                                                             onClick={() => { navigate(`/chat/${senderId}`); setShowNotifications(false); }}
-                                                            className="p-3 hover:bg-primary-50/40 rounded-2xl flex items-center gap-4 cursor-pointer transition-all group"
+                                                            className="p-4 hover:bg-primary-50/40 rounded-2xl flex items-center gap-4 cursor-pointer transition-all group border border-transparent hover:border-primary-100/50"
                                                         >
                                                             <div className="w-11 h-11 bg-primary-100 text-primary-600 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm group-hover:scale-105 transition-transform">
                                                                 <MessageSquare size={18} />
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <div className="flex justify-between items-start">
-                                                                    <p className="text-xs font-bold text-secondary-900 truncate uppercase tracking-tight">{getSenderName(senderId)}</p>
-                                                                    <span className="text-[10px] font-black text-primary-600 ml-1">{data.count} New</span>
+                                                                <div className="flex justify-between items-center">
+                                                                    <p className="text-sm font-black text-secondary-900 truncate uppercase tracking-tight">{getSenderName(senderId)}</p>
+                                                                    {data.count > 0 && (
+                                                                        <div className="relative flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform ml-2">
+                                                                            <div
+                                                                                style={{ backgroundColor: '#751515ff' }}
+                                                                                className="absolute inset-0 rounded-full blur-[6px] opacity-40 animate-pulse"
+                                                                            ></div>
+                                                                            <div
+                                                                                style={{ background: 'linear-gradient(135deg, #691212ff 0%, #6b0f0fff 100%)' }}
+                                                                                className="w-6 h-6 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-xl border-[1.5px] border-white relative z-10 leading-none"
+                                                                            >
+                                                                                {data.count}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                                 <p className="text-[10px] text-secondary-400 font-bold uppercase tracking-widest mt-0.5">Dispatched communication</p>
                                                             </div>
@@ -144,7 +157,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                                         <div
                                                             key={n._id}
                                                             onClick={() => handleNotificationClick(n)}
-                                                            className={`p-3 rounded-2xl flex items-center gap-4 cursor-pointer transition-all group ${n.isRead ? 'opacity-60 hover:bg-secondary-50' : 'bg-secondary-50/50 hover:bg-primary-50/40 outline outline-1 outline-primary-500/10'}`}
+                                                            className={`p-4 rounded-2xl flex items-center gap-4 cursor-pointer transition-all group ${n.isRead ? 'opacity-60 hover:bg-secondary-50' : 'bg-secondary-50/50 hover:bg-primary-50/40 outline outline-1 outline-primary-500/10'}`}
                                                         >
                                                             <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm group-hover:scale-105 transition-transform ${n.isRead ? 'bg-secondary-100 text-secondary-400' : 'bg-amber-100 text-amber-600'}`}>
                                                                 {n.type?.includes('appointment') ? <Calendar size={18} /> : <Clock size={18} />}

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     Users,
@@ -11,10 +11,14 @@ import {
     MoreVertical,
     ArrowRight,
     Building2,
-    GraduationCap
+    GraduationCap,
+    Plus,
+    X,
+    Save
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getStudents } from '../store/slices/studentSlice';
-import { getTeachers } from '../store/slices/teacherSlice';
+import { getTeachers, getMyProfile, updateMyAvailability, syncMyFreeSlots } from '../store/slices/teacherSlice';
 import { getSubjects } from '../store/slices/subjectSlice';
 import { getDepartments } from '../store/slices/departmentSlice';
 import { getMyAppointments, updateAppointmentStatus } from '../store/slices/appointmentSlice';
@@ -24,10 +28,29 @@ const Dashboard = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
     const { students } = useSelector((state) => state.students);
-    const { teachers } = useSelector((state) => state.teachers);
+    const { teachers, currentTeacherProfile } = useSelector((state) => state.teachers);
     const { subjects } = useSelector((state) => state.subjects);
     const { departments } = useSelector((state) => state.departments);
     const { appointments } = useSelector((state) => state.appointments);
+
+    const [showTimetableModal, setShowTimetableModal] = useState(false);
+    const [timetable, setTimetable] = useState([]);
+
+    const generateEmptySchedule = () => {
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const defaultTimes = [
+            { start: '09:00', end: '09:50' },
+            { start: '09:50', end: '10:40' },
+            { start: '10:50', end: '11:40' },
+            { start: '11:40', end: '12:30' },
+            { start: '13:30', end: '14:20' },
+            { start: '14:20', end: '15:10' }
+        ];
+        return days.map(day => ({
+            day,
+            slots: defaultTimes.map(time => ({ ...time, isBooked: false, subject: '' }))
+        }));
+    };
 
     useEffect(() => {
         dispatch(getStudents());
@@ -35,7 +58,52 @@ const Dashboard = () => {
         dispatch(getSubjects());
         dispatch(getDepartments());
         dispatch(getMyAppointments());
-    }, [dispatch]);
+        if (user?.role === 'teacher') {
+            dispatch(getMyProfile());
+            dispatch(syncMyFreeSlots()).then(() => {
+                dispatch(getMyAppointments());
+            });
+        }
+    }, [dispatch, user]);
+
+    const handleOpenTimetableModal = () => {
+        if (!currentTeacherProfile) {
+            toast.error('Teacher profile not loaded yet');
+            return;
+        }
+        setTimetable(currentTeacherProfile.availability?.length > 0 
+            ? JSON.parse(JSON.stringify(currentTeacherProfile.availability)) 
+            : generateEmptySchedule()
+        );
+        setShowTimetableModal(true);
+    };
+
+    const handleSaveTimetable = async (e) => {
+        e.preventDefault();
+        try {
+            const cleanedTimetable = timetable.map(day => ({
+                ...day,
+                slots: day.slots.map(slot => ({
+                    ...slot,
+                    subject: slot.subject === '' ? null : slot.subject
+                }))
+            }));
+
+            await dispatch(updateMyAvailability(cleanedTimetable)).unwrap();
+            toast.success('Timetable updated successfully!');
+            setShowTimetableModal(false);
+        } catch (error) {
+            toast.error(error || 'Failed to update timetable');
+        }
+    };
+
+    const handleTimeChange = (dayIndex, slotIndex, type, value) => {
+        setTimetable(prev => {
+            const newTimetable = JSON.parse(JSON.stringify(prev));
+            newTimetable[dayIndex].slots[slotIndex][type] = value;
+            return newTimetable;
+        });
+    };
 
     const stats = [
         { name: 'Active Students', value: students.length, icon: GraduationCap, color: 'text-primary-600', bgColor: 'bg-primary-50', trend: 'Live', trendUp: true },
@@ -74,6 +142,25 @@ const Dashboard = () => {
                         <span className="text-[10px] font-black uppercase tracking-widest text-secondary-500">Live Server Port: 5005</span>
                     </div>
                 </div>
+                {user?.role === 'teacher' && (
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => dispatch(syncMyFreeSlots()).unwrap().then((res) => {
+                                toast.success(res.message || 'Slots synced!');
+                                dispatch(getMyAppointments());
+                            })}
+                            className="btn-secondary flex items-center gap-2 shadow-sm"
+                        >
+                            <TrendingUp size={18} /> Sync Slots
+                        </button>
+                        <button 
+                            onClick={handleOpenTimetableModal}
+                            className="btn-primary flex items-center gap-2 shadow-xl shadow-primary-500/20"
+                        >
+                            <Calendar size={18} /> Manage My Timetable
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Stats Grid */}
@@ -196,6 +283,87 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Timetable Modal */}
+            <AnimatePresence>
+                {showTimetableModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowTimetableModal(false)}
+                            className="absolute inset-0 bg-secondary-900/40 backdrop-blur-sm"
+                        ></motion.div>
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden relative z-10 border border-secondary-100 flex flex-col max-h-[90vh]"
+                        >
+                            <div className="px-6 py-4 bg-secondary-50 border-b border-secondary-100 flex items-center justify-between transition-colors shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-1.5 bg-accent-blue text-white rounded-lg"><Calendar size={16} /></div>
+                                    <h2 className="text-lg font-bold text-secondary-900 uppercase tracking-tight transition-colors">
+                                        Manage My Timetable
+                                    </h2>
+                                </div>
+                                <button onClick={() => setShowTimetableModal(false)} className="p-2 text-secondary-400 hover:text-secondary-600 rounded-xl transition-all font-bold uppercase text-xs">✕</button>
+                            </div>
+
+                            <form onSubmit={handleSaveTimetable} className="flex flex-col overflow-hidden min-h-0">
+                                <div className="p-4 overflow-y-auto space-y-2 flex-1 min-h-0">
+                                    <div className="overflow-x-auto bg-white rounded-xl border border-secondary-100 shadow-sm">
+                                        <table className="w-full text-left border-collapse min-w-[700px]">
+                                            <thead>
+                                                <tr className="bg-secondary-50 border-b border-secondary-100">
+                                                    <th className="p-2 text-[10px] font-bold text-secondary-500 uppercase tracking-widest text-center border-r border-secondary-100 w-24">Day</th>
+                                                    {[1, 2, 3, 4, 5, 6].map(p => (
+                                                        <th key={p} className="p-2 text-[10px] font-bold text-secondary-500 uppercase tracking-widest text-center border-r border-secondary-100 last:border-0 w-32">Period {p}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {timetable.map((daySchedule, dayIndex) => (
+                                                    <tr key={daySchedule.day} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/50 transition-colors">
+                                                        <td className="p-2 border-r border-secondary-100 align-middle">
+                                                            <div className="font-bold text-secondary-900 uppercase tracking-wider text-[10px] text-center">{daySchedule.day}</div>
+                                                        </td>
+                                                        {daySchedule.slots.map((slot, slotIndex) => (
+                                                            <td key={slotIndex} className="p-1 px-2 border-r border-secondary-100 last:border-0 align-middle">
+                                                                <select
+                                                                    className="w-full text-[10px] py-1.5 px-1 bg-transparent border border-transparent rounded hover:bg-white hover:border-secondary-200 focus:bg-white focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-all cursor-pointer font-medium text-secondary-700 text-center truncate"
+                                                                    value={slot.subject || ''}
+                                                                    onChange={(e) => {
+                                                                        handleTimeChange(dayIndex, slotIndex, 'subject', e.target.value);
+                                                                        handleTimeChange(dayIndex, slotIndex, 'isBooked', !!e.target.value);
+                                                                    }}
+                                                                >
+                                                                    <option value="" className="text-secondary-400 font-normal">-- Free --</option>
+                                                                    {subjects?.map(sub => (
+                                                                        <option key={sub._id} value={sub._id}>{sub.name}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div className="p-4 border-t border-secondary-100 bg-white flex justify-end gap-3 shrink-0">
+                                    <button type="button" onClick={() => setShowTimetableModal(false)} className="btn-secondary px-6 font-black uppercase tracking-widest text-[10px]">Discard</button>
+                                    <button type="submit" className="btn-primary flex items-center gap-2 px-8 shadow-lg shadow-primary-500/20 font-black uppercase tracking-widest text-[10px]">
+                                        <Save size={16} />
+                                        Save My Timetable
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

@@ -83,6 +83,17 @@ export const updateAppointmentStatus = createAsyncThunk('appointments/updateStat
     }
 });
 
+export const cancelSlot = createAsyncThunk('appointments/cancelSlot', async ({ id, reason }, thunkAPI) => {
+    try {
+        const token = thunkAPI.getState().auth.user?.token;
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        const response = await axios.put(`${API_URL}/slots/${id}/cancel`, { reason }, config);
+        return response.data;
+    } catch (error) {
+        return thunkAPI.rejectWithValue(error.response?.data?.message || error.message);
+    }
+});
+
 export const appointmentSlice = createSlice({
     name: 'appointments',
     initialState,
@@ -117,6 +128,12 @@ export const appointmentSlice = createSlice({
                 state.availableSlots = state.availableSlots.filter(s => s._id !== action.payload._id);
             })
             .addCase(updateAppointmentStatus.fulfilled, (state, action) => {
+                const index = state.appointments.findIndex(a => a._id === action.payload._id);
+                if (index !== -1) {
+                    state.appointments[index] = action.payload;
+                }
+            })
+            .addCase(cancelSlot.fulfilled, (state, action) => {
                 const index = state.appointments.findIndex(a => a._id === action.payload._id);
                 if (index !== -1) {
                     state.appointments[index] = action.payload;

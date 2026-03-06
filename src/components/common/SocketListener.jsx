@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import io from 'socket.io-client';
@@ -16,6 +16,25 @@ const SocketListener = () => {
     const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth);
     const { unreadCounts } = useSelector((state) => state.messages);
+    const [initialAlertDone, setInitialAlertDone] = useState(false);
+    const [notificationSound] = useState(new Audio('/MESSAGE-RINGTONE.mp3'));
+    const [soundBlocked, setSoundBlocked] = useState(false);
+
+    // Audio Priming - Unlock audio on first interaction
+    useEffect(() => {
+        const primeAudio = () => {
+            notificationSound.play()
+                .then(() => {
+                    notificationSound.pause();
+                    notificationSound.currentTime = 0;
+                    console.log('Audio Engine Unlocked');
+                })
+                .catch(() => { });
+            window.removeEventListener('mousedown', primeAudio);
+        };
+        window.addEventListener('mousedown', primeAudio);
+        return () => window.removeEventListener('mousedown', primeAudio);
+    }, [notificationSound]);
 
     useEffect(() => {
         if (!user) return;
@@ -29,12 +48,14 @@ const SocketListener = () => {
             const isChattingWithSender = currentPath === `/chat/${message.sender._id}` || currentPath === `/chat/${message.sender}`;
 
             // Play notification sound
-            const soundUrl = message.messageType === 'call'
-                ? 'https://assets.mixkit.co/active_storage/sfx/1317/1317-preview.mp3' // Ringing sound
-                : 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
-
-            const audio = new Audio(soundUrl);
-            audio.play().catch(e => console.log('Audio play failed:', e));
+            if (message.messageType === 'call') {
+                const callAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/1317/1317-preview.mp3');
+                callAudio.play().catch(e => console.log('Call audio play failed:', e));
+            } else {
+                notificationSound.currentTime = 0;
+                notificationSound.volume = 0.5;
+                notificationSound.play().catch(e => console.log('Message audio play failed:', e));
+            }
 
             if (isChattingWithSender) {
                 dispatch(addMessage(message));
@@ -150,6 +171,11 @@ const SocketListener = () => {
         socket.on('newNotification', (notification) => {
             dispatch(addNotification(notification));
 
+            // Play notification sound
+            notificationSound.currentTime = 0;
+            notificationSound.volume = 0.5;
+            notificationSound.play().catch(e => console.log('Notification audio play failed:', e));
+
             // System level toast for important alerts
             toast.custom((t) => (
                 <div
@@ -187,6 +213,45 @@ const SocketListener = () => {
             dispatch(getStudents());
         }
     }, [user, dispatch]);
+
+    // Alert on login if there are pending items
+    useEffect(() => {
+        if (!user || initialAlertDone) return;
+
+        const totalUnread = Object.values(unreadCounts).reduce((acc, curr) => acc + (curr.count || 0), 0);
+
+        if (totalUnread > 0) {
+            notificationSound.currentTime = 0;
+            notificationSound.volume = 0.4;
+            notificationSound.play().catch(() => {
+                console.log('Initial sound blocked by browser policy');
+            });
+
+            toast.custom((t) => (
+                <div
+                    className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-primary-600 text-white shadow-2xl rounded-2xl pointer-events-auto flex ring-1 ring-black ring-opacity-5 p-4 cursor-pointer hover:bg-primary-700 transition-all`}
+                    onClick={() => {
+                        notificationSound.play().catch(() => { });
+                        toast.dismiss(t.id);
+                    }}
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <Calendar className="text-white" size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm font-black uppercase tracking-widest">Welcome Back Chief</p>
+                            <p className="text-[11px] font-bold opacity-90 mt-0.5">
+                                You have {totalUnread} new notifications. Click here to listen and view.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ), { duration: 6000 });
+
+            setInitialAlertDone(true);
+        }
+    }, [unreadCounts, user, initialAlertDone]);
 
     return null;
 };
