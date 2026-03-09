@@ -26,8 +26,19 @@ const Appointments = () => {
         dispatch(getMyAppointments());
         dispatch(getAvailableSlots());
         dispatch(getSubjects());
-        return () => dispatch(reset());
-    }, [dispatch]);
+
+        // Global Navbar Events
+        const handleAdd = () => {
+            if (user?.role === 'teacher') setShowSlotModal(true);
+        };
+        window.addEventListener('open-add-modal', handleAdd);
+
+        return () => {
+            dispatch(reset());
+            window.removeEventListener('open-add-modal', handleAdd);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dispatch, user?.role]);
 
     const filteredAppointments = appointments.filter(app => {
         const isPast = new Date(app.date) < new Date();
@@ -95,21 +106,6 @@ const Appointments = () => {
 
     return (
         <div className="space-y-8 pb-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h1 className="text-3xl font-bold text-secondary-900 uppercase tracking-tight">Academic Consultations</h1>
-                    <p className="text-secondary-500 mt-1 font-medium">Schedule and manage your one-on-one sessions with faculty.</p>
-                </div>
-                {user?.role === 'teacher' && (
-                    <button
-                        onClick={() => setShowSlotModal(true)}
-                        className="btn-primary flex items-center gap-2 shadow-lg shadow-primary-500/20"
-                    >
-                        <Plus size={20} />
-                        Add Free Time
-                    </button>
-                )}
-            </div>
 
             <div className="flex border-b border-secondary-100 p-1 bg-secondary-50/50 rounded-xl w-fit transition-colors">
                 <button
@@ -135,7 +131,7 @@ const Appointments = () => {
             {activeTab === 'slots' && (
                 <div className="flex items-center gap-3 px-4 py-2 bg-secondary-50 rounded-2xl border border-secondary-100 w-fit">
                     <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Daily Phase View:</span>
-                    <button 
+                    <button
                         onClick={() => setShowTodayOnly(!showTodayOnly)}
                         className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${showTodayOnly ? 'bg-primary-600 text-white shadow-lg' : 'bg-white text-secondary-500 border border-secondary-200'}`}
                     >
@@ -147,8 +143,8 @@ const Appointments = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <AnimatePresence mode="popLayout">
                     {(() => {
-                        let list = activeTab === 'slots' 
-                            ? (user?.role === 'teacher' 
+                        let list = activeTab === 'slots'
+                            ? (user?.role === 'teacher'
                                 ? appointments.filter(a => a.appointmentType === 'slot' && a.status !== 'cancelled')
                                 : availableSlots)
                             : filteredAppointments;
@@ -179,14 +175,14 @@ const Appointments = () => {
 
                                     <div className="flex items-center gap-4 mb-8">
                                         <div className="w-14 h-14 rounded-2xl bg-secondary-50 border border-secondary-100 flex items-center justify-center text-xl font-bold text-secondary-400 group-hover:bg-primary-600 group-hover:text-white transition-all duration-300 shadow-inner uppercase">
-                                            {(app.status === 'available' 
-                                                ? app.teacher?.name 
+                                            {(app.status === 'available'
+                                                ? app.teacher?.name
                                                 : (user?.role === 'student' ? app.teacher?.name : app.student?.name))?.charAt(0) || 'S'}
                                         </div>
                                         <div className="overflow-hidden">
                                             <h3 className="font-bold text-secondary-900 group-hover:text-primary-600 transition-colors truncate uppercase tracking-tight">
-                                                {app.status === 'available' 
-                                                    ? (app.teacher?.name || 'Staff Member') 
+                                                {app.status === 'available'
+                                                    ? (app.teacher?.name || 'Staff Member')
                                                     : (user?.role === 'student' ? app.teacher?.name : (app.student?.name || 'Student'))}
                                             </h3>
                                             <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest truncate">{app.subject?.name || 'Academic Consultation'}</p>
@@ -305,12 +301,12 @@ const Appointments = () => {
                             <form onSubmit={handleCancelSlot} className="p-8 space-y-6">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Reason for Removal</label>
-                                    <textarea 
-                                        required 
-                                        className="input-field min-h-[120px]" 
-                                        placeholder="Explain why this slot is no longer available (e.g., Departmental Meeting, Leave, etc.)" 
-                                        value={cancelReason} 
-                                        onChange={(e) => setCancelReason(e.target.value)} 
+                                    <textarea
+                                        required
+                                        className="input-field min-h-[120px]"
+                                        placeholder="Explain why this slot is no longer available (e.g., Departmental Meeting, Leave, etc.)"
+                                        value={cancelReason}
+                                        onChange={(e) => setCancelReason(e.target.value)}
                                     />
                                 </div>
                                 <div className="pt-4 flex gap-3">

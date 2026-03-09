@@ -9,11 +9,11 @@ const Layout = () => {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     return (
-        <div className="flex min-h-screen overflow-hidden relative">
+        <div className="flex min-h-screen relative">
             <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
-            <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 w-full ${isCollapsed ? 'lg:ml-[80px]' : 'lg:ml-[280px]'}`}>
-                <Navbar setIsCollapsed={setIsCollapsed} isCollapsed={isCollapsed} />
-                <main className="flex-1 p-6 lg:p-10 max-w-[1600px] mx-auto w-full">
+            <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 w-full ${isCollapsed ? 'md:ml-[80px]' : 'md:ml-[20vw]'}`}>
+                <Navbar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+                <main className="flex-1 p-6 md:p-10 w-full">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={window.location.pathname}

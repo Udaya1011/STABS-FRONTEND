@@ -47,26 +47,26 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         <>
             {/* Mobile Overlay */}
             <div
-                className={`fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-30 lg:hidden transition-opacity duration-300 ${!isCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-30 md:hidden transition-opacity duration-300 ${!isCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 onClick={() => setIsCollapsed(true)}
             />
 
             <motion.aside
                 initial={false}
-                animate={{ width: isCollapsed ? '80px' : '280px' }}
-                className={`fixed left-0 top-0 h-screen bg-white text-secondary-600 flex flex-col z-40 transition-transform lg:translate-x-0 duration-300 ${isCollapsed ? '-translate-x-full' : 'translate-x-0'} border-r border-secondary-100 shadow-sm`}
+                animate={{ width: isCollapsed ? '80px' : '20vw' }}
+                className={`fixed left-0 top-0 h-screen bg-white text-secondary-600 flex flex-col z-40 transition-transform md:translate-x-0 duration-300 ${isCollapsed ? '-translate-x-full' : 'translate-x-0'} border-r border-secondary-100 shadow-sm`}
             >
-                {/* Sidebar Header */}
-                <div className="p-6 flex items-center justify-between">
+                {/* Sidebar Header - Highlighted */}
+                <div className="p-6 flex items-center justify-between bg-primary-600 border-b border-primary-700 shadow-sm">
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary-500/20">
+                        <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center flex-shrink-0 border border-white/20">
                             <GraduationCap className="text-white" size={24} />
                         </div>
                         {!isCollapsed && (
                             <motion.span
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="text-secondary-900 font-display font-bold text-xl tracking-tight"
+                                className="text-white font-display font-black text-xl tracking-tight"
                             >
                                 RVS CAS
                             </motion.span>
@@ -74,13 +74,15 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                     </div>
                 </div>
 
-                {/* Toggle Button */}
+                {/* Toggle Arrow Button */}
                 <button
                     onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="absolute -right-3 top-20 w-6 h-6 bg-white text-secondary-400 hover:text-primary-600 rounded-full hidden lg:flex items-center justify-center shadow-md border border-secondary-100 group z-50 transition-colors"
+                    className="absolute -right-3 top-20 w-6 h-6 bg-white text-secondary-400 hover:text-primary-600 rounded-full hidden md:flex items-center justify-center shadow-md border border-secondary-100 group z-50 transition-colors"
                 >
                     {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
                 </button>
+
+
 
                 {/* Navigation */}
                 <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
@@ -120,7 +122,6 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                     ))}
                 </nav>
 
-                {/* User Footer */}
                 <div className="p-4 border-t border-secondary-100 bg-secondary-50/50">
                     {!isCollapsed && (
                         <div className="mb-4 px-3 py-3 bg-white rounded-2xl flex items-center gap-3 border border-secondary-100 hover:border-primary-200 transition-colors cursor-pointer shadow-sm">
@@ -141,8 +142,8 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                         onClick={handleLogout}
                         className="w-full flex items-center gap-4 px-3 py-3 rounded-xl hover:bg-red-50 hover:text-red-600 text-secondary-500 transition-all font-semibold group"
                     >
-                        <LogOut size={22} className="group-hover:text-red-600" />
-                        {!isCollapsed && <span className="text-sm">Logout</span>}
+                    <LogOut size={22} className="group-hover:text-red-600" />
+                    {!isCollapsed && <span className="text-sm">Logout</span>}
                     </button>
                 </div>
             </motion.aside>

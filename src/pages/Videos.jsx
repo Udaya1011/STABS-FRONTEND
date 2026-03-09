@@ -46,6 +46,19 @@ const Videos = () => {
             dispatch(getSubjects());
             fetchVideos();
         }
+
+        // Global Navbar Events
+        const handleSearch = (e) => setSearchQuery(e.detail);
+        const handleAdd = () => setShowUploadModal(true);
+
+        window.addEventListener('global-search', handleSearch);
+        window.addEventListener('open-add-modal', handleAdd);
+
+        return () => {
+            window.removeEventListener('global-search', handleSearch);
+            window.removeEventListener('open-add-modal', handleAdd);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dispatch, user?.token]);
 
     const fetchVideos = async () => {
@@ -128,36 +141,6 @@ const Videos = () => {
 
     return (
         <div className="space-y-8 pb-10">
-            {/* Header section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h1 className="text-3xl font-bold text-secondary-900 uppercase tracking-tight transition-colors">Learning Hub</h1>
-                    <p className="text-secondary-500 mt-1 font-medium transition-colors">Access high-quality video lectures and academic digital resources.</p>
-                </div>
-                {(user?.role === 'teacher' || user?.role === 'admin') && (
-                    <button
-                        onClick={() => setShowUploadModal(true)}
-                        className="btn-primary flex items-center gap-2 shadow-lg shadow-primary-500/20"
-                    >
-                        <Upload size={18} />
-                        Publish Resource
-                    </button>
-                )}
-            </div>
-
-            {/* Search section */}
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1 max-w-xl">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search by lecture title, subject or module..."
-                        className="input-field pl-12 py-3.5"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
-            </div>
 
             {/* Video Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">

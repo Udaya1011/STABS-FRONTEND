@@ -1,20 +1,51 @@
 import { useState, useEffect } from 'react';
-import { Bell, Search, Settings, HelpCircle, Sun, Moon, Menu, CheckCheck, Clock, MessageSquare, Calendar } from 'lucide-react';
+import { Bell, HelpCircle, Sun, Moon, Menu, CheckCheck, Clock, MessageSquare, Calendar, Search, Download, Plus } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getMyNotifications, markAsRead } from '../../store/slices/notificationSlice';
 
 const Navbar = ({ isCollapsed, setIsCollapsed }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useSelector((state) => state.auth);
     const { unreadCounts } = useSelector((state) => state.messages);
     const { notifications } = useSelector((state) => state.notifications);
     const { teachers } = useSelector((state) => state.teachers);
     const { students } = useSelector((state) => state.students);
+    const { departments } = useSelector((state) => state.departments);
 
     const [showNotifications, setShowNotifications] = useState(false);
+    const [showDeptStats, setShowDeptStats] = useState(false);
+    const [activeDropdown, setActiveDropdown] = useState(null); // 'sem', 'year', 'dept'
+    const [selectedFilters, setSelectedFilters] = useState({
+        sem: 'all',
+        year: 'all',
+        dept: 'all'
+    });
+
+    const getPageInfo = () => {
+        const path = location.pathname;
+        if (path === '/' || path === '/dashboard') return { title: 'Dashboard', subtitle: 'System overview and metrics' };
+        if (path.startsWith('/departments')) return { title: 'Departments', subtitle: 'Manage academic departments' };
+        if (path.startsWith('/subjects')) return { title: 'Subjects', subtitle: 'Academic curriculum control' };
+        if (path.startsWith('/teachers')) return { title: 'Faculty & Staff', subtitle: 'Manage teaching personnel' };
+        if (path.startsWith('/students')) return { title: 'Students', subtitle: 'Manage student directory' };
+        if (path.startsWith('/appointments')) return { title: 'Appointments', subtitle: 'Academic schedule management' };
+        if (path.startsWith('/chat')) return { title: 'Messages', subtitle: 'Direct communications network' };
+        if (path.startsWith('/videos')) return { title: 'Resources', subtitle: 'Academic video archive' };
+        if (path.startsWith('/profile')) return { title: 'My Profile', subtitle: 'Manage your account settings' };
+
+        const parts = path.split('/').filter(Boolean);
+        if (parts.length > 0) {
+            return {
+                title: parts[0].charAt(0).toUpperCase() + parts[0].slice(1).replace(/-/g, ' '),
+                subtitle: 'System Module'
+            };
+        }
+        return { title: 'Overview', subtitle: 'System control panel' };
+    };
 
     useEffect(() => {
         if (user) {
@@ -53,29 +84,191 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
     };
 
     return (
-        <nav className="h-20 px-4 md:px-6 flex items-center justify-between sticky top-0 z-20 bg-white/70 backdrop-blur-md border-b border-secondary-100 shadow-sm transition-colors duration-300">
+        <nav className="h-24 px-4 md:px-6 flex items-center justify-between sticky top-0 z-20 bg-white/70 backdrop-blur-md border-b border-secondary-100 shadow-sm transition-colors duration-300">
             <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="lg:hidden p-2 -ml-2 mr-2 text-secondary-500 hover:bg-secondary-50 rounded-xl transition-colors"
+                className="md:hidden p-2 -ml-2 mr-2 text-secondary-500 hover:bg-secondary-50 rounded-xl transition-colors"
             >
                 <Menu size={24} />
             </button>
 
-            <div className="hidden md:flex flex-1 max-w-xl">
-                <div className="relative group w-full">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400 group-focus-within:text-primary-600 transition-colors" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search for something..."
-                        className="w-full bg-secondary-50 border border-secondary-100 rounded-xl py-2.5 pl-11 pr-4 text-sm font-medium text-secondary-900 placeholder:text-secondary-400 focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all shadow-sm"
-                    />
+            <div className="hidden md:flex flex-1 max-w-xl items-center pl-2">
+                <div className="flex flex-col justify-center">
+                    <h1 className="text-2xl font-extrabold text-primary-600 tracking-tight leading-none mb-0.5">
+                        {getPageInfo().title}
+                    </h1>
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em]">
+                        {getPageInfo().subtitle}
+                    </p>
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 md:gap-5 flex-shrink-0">
+            <div className="flex items-center gap-3 md:gap-5 flex-shrink-0">
+                <div className="hidden lg:flex items-center gap-3">
+                    {location.pathname.startsWith('/departments') && (
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowDeptStats(!showDeptStats)}
+                                className={`p-2 rounded-xl transition-all ${showDeptStats ? 'bg-primary-50 text-primary-600 ring-4 ring-primary-500/5' : 'text-secondary-500 hover:bg-secondary-50 border border-transparent'}`}
+                                title="Department Statistics"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bar-chart-2"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+                            </button>
+
+                            <AnimatePresence>
+                                {showDeptStats && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setShowDeptStats(false)}></div>
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                            className="absolute top-full mt-3 left-0 w-[280px] bg-white rounded-3xl shadow-2xl border border-secondary-100 overflow-hidden z-50 origin-top-left p-5"
+                                        >
+                                            <h5 className="font-bold text-secondary-900 text-sm uppercase tracking-tight mb-4 border-b border-secondary-50 pb-2">Department Overview</h5>
+                                            <div className="space-y-4">
+                                                <div className="flex justify-between items-center bg-secondary-50/50 p-3 rounded-xl border border-secondary-50">
+                                                    <span className="text-xs font-bold text-secondary-500 uppercase tracking-widest">Total Depts</span>
+                                                    <span className="text-sm font-black text-primary-600">{departments?.length || 0}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center bg-secondary-50/50 p-3 rounded-xl border border-secondary-50">
+                                                    <span className="text-xs font-bold text-secondary-500 uppercase tracking-widest">Total Blocks</span>
+                                                    <span className="text-sm font-black text-primary-600">{departments?.reduce((sum, d) => sum + (d.blocks?.length || 0), 0) || 0}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center bg-secondary-50/50 p-3 rounded-xl border border-secondary-50">
+                                                    <span className="text-xs font-bold text-secondary-500 uppercase tracking-widest">Total Rooms</span>
+                                                    <span className="text-sm font-black text-accent-purple">{departments?.reduce((sum, d) => sum + (d.classrooms?.length || 0), 0) || 0}</span>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    </>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    )}
 
 
-                <div className="h-8 w-[1px] bg-secondary-100 mx-1 hidden sm:block"></div>
+                    {location.pathname.startsWith('/students') && (
+                        <div className="flex items-center gap-2">
+                             {/* Semester Dropdown */}
+                             <div className="relative">
+                                <button
+                                    onClick={() => setActiveDropdown(activeDropdown === 'sem' ? null : 'sem')}
+                                    className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeDropdown === 'sem' ? 'border-primary-600 bg-primary-50 text-primary-600 shadow-sm' : 'border-primary-100 bg-secondary-50 text-secondary-600 hover:bg-primary-50 hover:border-primary-300'}`}
+                                >
+                                    <span>Sems: {selectedFilters.sem === 'all' ? 'All' : selectedFilters.sem}</span>
+                                    <motion.div animate={{ rotate: activeDropdown === 'sem' ? 180 : 0 }}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                    </motion.div>
+                                </button>
+                                <AnimatePresence>
+                                    {activeDropdown === 'sem' && (
+                                        <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setActiveDropdown(null)}></div>
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                className="absolute top-full mt-2 left-0 w-32 bg-white rounded-2xl shadow-2xl border border-secondary-100 overflow-hidden z-50 p-1.5"
+                                            >
+                                                <button onClick={() => { setSelectedFilters({...selectedFilters, sem: 'all'}); window.dispatchEvent(new CustomEvent('semester-filter', { detail: 'all' })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">All Semesters</button>
+                                                {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
+                                                    <button key={s} onClick={() => { setSelectedFilters({...selectedFilters, sem: s}); window.dispatchEvent(new CustomEvent('semester-filter', { detail: s })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">Semester {s}</button>
+                                                ))}
+                                            </motion.div>
+                                        </>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+
+                            {/* Year Dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setActiveDropdown(activeDropdown === 'year' ? null : 'year')}
+                                    className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeDropdown === 'year' ? 'border-primary-600 bg-primary-50 text-primary-600 shadow-sm' : 'border-primary-100 bg-secondary-50 text-secondary-600 hover:bg-primary-50 hover:border-primary-300'}`}
+                                >
+                                    <span>Year: {selectedFilters.year === 'all' ? 'All' : selectedFilters.year}</span>
+                                    <motion.div animate={{ rotate: activeDropdown === 'year' ? 180 : 0 }}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                    </motion.div>
+                                </button>
+                                <AnimatePresence>
+                                    {activeDropdown === 'year' && (
+                                        <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setActiveDropdown(null)}></div>
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                className="absolute top-full mt-2 left-0 w-36 bg-white rounded-2xl shadow-2xl border border-secondary-100 overflow-hidden z-50 p-1.5"
+                                            >
+                                                <button onClick={() => { setSelectedFilters({...selectedFilters, year: 'all'}); window.dispatchEvent(new CustomEvent('year-filter', { detail: 'all' })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">All Years</button>
+                                                {[...new Set(students.map(s => s.academicYear))].filter(Boolean).sort().map(y => (
+                                                    <button key={y} onClick={() => { setSelectedFilters({...selectedFilters, year: y}); window.dispatchEvent(new CustomEvent('year-filter', { detail: y })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">{y}</button>
+                                                ))}
+                                            </motion.div>
+                                        </>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        </div>
+                    )}
+
+                    {['/subjects', '/teachers', '/students'].some(path => location.pathname.startsWith(path)) && (
+                        <div className="relative">
+                            <button
+                                onClick={() => setActiveDropdown(activeDropdown === 'dept' ? null : 'dept')}
+                                className={`px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 min-w-[140px] justify-between ${activeDropdown === 'dept' ? 'border-primary-600 bg-primary-50 text-primary-600 shadow-sm' : 'border-primary-100 bg-secondary-50 text-secondary-600 hover:bg-primary-50 hover:border-primary-300'}`}
+                            >
+                                <span>{selectedFilters.dept === 'all' ? 'Programme: All' : (departments.find(d => d._id === selectedFilters.dept)?.programme || departments.find(d => d._id === selectedFilters.dept)?.name || 'Programme')}</span>
+                                <motion.div animate={{ rotate: activeDropdown === 'dept' ? 180 : 0 }}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                </motion.div>
+                            </button>
+                            <AnimatePresence>
+                                {activeDropdown === 'dept' && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setActiveDropdown(null)}></div>
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            className="absolute top-full mt-2 left-0 w-48 bg-white rounded-2xl shadow-2xl border border-secondary-100 overflow-hidden z-50 p-1.5"
+                                        >
+                                            <button onClick={() => { setSelectedFilters({...selectedFilters, dept: 'all'}); window.dispatchEvent(new CustomEvent('department-filter', { detail: 'all' })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">All Programmes</button>
+                                            {departments?.map(dep => (
+                                                <button key={dep._id} onClick={() => { setSelectedFilters({...selectedFilters, dept: dep._id}); window.dispatchEvent(new CustomEvent('department-filter', { detail: dep._id })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">{dep.programme || dep.name}</button>
+                                            ))}
+                                        </motion.div>
+                                    </>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    )}
+
+                    <div className="relative group">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary-400 group-focus-within:text-primary-600 transition-colors" size={16} />
+                        <input
+                            type="text"
+                            placeholder={`Search ${getPageInfo().title}...`}
+                            onChange={(e) => window.dispatchEvent(new CustomEvent('global-search', { detail: e.target.value }))}
+                            className="w-48 lg:w-64 bg-secondary-50 border border-secondary-200 rounded-xl py-2 pl-10 pr-4 text-sm font-medium text-secondary-900 placeholder:text-secondary-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm outline-none"
+                        />
+                    </div>
+
+                    {user?.role === 'admin' && !['Dashboard', 'My Profile', 'Messages'].includes(getPageInfo().title) && (
+                        <button
+                            onClick={() => window.dispatchEvent(new CustomEvent('open-add-modal'))}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white hover:bg-primary-700 font-bold text-sm tracking-wide rounded-xl transition-colors shadow-sm whitespace-nowrap"
+                        >
+                            <Plus size={18} strokeWidth={2.5} />
+                            Add {getPageInfo().title.replace(/s$/, '').replace(/ies$/, 'y')}
+                        </button>
+                    )}
+                </div>
+
+
+                <div className="h-8 w-[1px] bg-secondary-200 mx-1 hidden sm:block"></div>
 
                 {user?.role !== 'admin' && (
                     <div className="relative">
@@ -159,7 +352,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                                             onClick={() => handleNotificationClick(n)}
                                                             className={`p-4 rounded-2xl flex items-center gap-4 cursor-pointer transition-all group ${n.isRead ? 'opacity-60 hover:bg-secondary-50' : 'bg-secondary-50/50 hover:bg-primary-50/40 outline outline-1 outline-primary-500/10'}`}
                                                         >
-                                                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm group-hover:scale-105 transition-transform ${n.isRead ? 'bg-secondary-100 text-secondary-400' : 'bg-amber-100 text-amber-600'}`}>
+                                                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm group-hover:scale-105 transition-transform ${n.isRead ? 'bg-secondary-100 text-secondary-400' : 'bg-primary-100 text-primary-600'}`}>
                                                                 {n.type?.includes('appointment') ? <Calendar size={18} /> : <Clock size={18} />}
                                                             </div>
                                                             <div className="flex-1 min-w-0">
@@ -193,9 +386,6 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                     </div>
                 )}
 
-                <button className="hidden sm:flex p-2 text-secondary-500 rounded-xl border border-transparent hover:bg-secondary-50 transition-colors">
-                    <Settings size={20} />
-                </button>
 
                 <div className="flex items-center gap-3 pl-2 border-l border-secondary-100 ml-1">
                     <div className="text-right hidden lg:block">
@@ -214,6 +404,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                     </motion.div>
                 </div>
             </div>
+
         </nav>
     );
 };

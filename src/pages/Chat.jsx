@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { getMessages, sendMessage, addMessage, getUnreadCounts, setUnreadCount, reset } from '../store/slices/messageSlice';
 import { getTeachers } from '../store/slices/teacherSlice';
 import { getStudents } from '../store/slices/studentSlice';
-import { Send, Image, Paperclip, MoreVertical, Search, Check, CheckCheck, Smile, MessageSquare, ArrowLeft, X, FileText, Download, Phone, Video } from 'lucide-react';
+import { Send, Image, Paperclip, MoreVertical, Search, Check, CheckCheck, Smile, MessageSquare, ArrowLeft, X, FileText, Download, Phone, Video, Mic, Camera, StopCircle, Circle, VideoOff, Volume2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import io from 'socket.io-client';
 import axios from 'axios';
@@ -22,6 +22,14 @@ const Chat = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const fileInputRef = useRef(null);
     const messagesEndRef = useRef(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [cameraStream, setCameraStream] = useState(null);
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
+    const videoRef = useRef(null);
+    const recordingTimerRef = useRef(null);
 
     const dispatch = useDispatch();
     const { messages, unreadCounts, isLoading: messagesLoading } = useSelector((state) => state.messages);
@@ -98,6 +106,7 @@ const Chat = () => {
             let messageType = 'file';
             if (mimetype.startsWith('image/')) messageType = 'image';
             else if (mimetype.startsWith('video/')) messageType = 'video';
+            else if (mimetype.startsWith('audio/')) messageType = 'audio';
 
             handleSendMessage(null, { messageType, fileUrl: url });
             toast.success('File uploaded successfully');
@@ -111,6 +120,123 @@ const Chat = () => {
 
     const addEmoji = (emoji) => {
         setContent(prev => prev + emoji);
+    };
+
+    // Audio Recording Logic
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunksRef.current.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                const file = new File([audioBlob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {
+                    setUploading(true);
+                    const token = user?.token;
+                    const config = {
+                        headers: { Authorization: `Bearer ${token}` }
+                    };
+
+                    const response = await axios.post('/api/upload', formData, config);
+                    handleSendMessage(null, { messageType: 'audio', fileUrl: response.data.url });
+                    toast.success('Voice note sent');
+                } catch (error) {
+                    toast.error('Failed to send voice note');
+                } finally {
+                    setUploading(false);
+                }
+                
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+            setRecordingTime(0);
+            recordingTimerRef.current = setInterval(() => {
+                setRecordingTime(prev => prev + 1);
+            }, 1000);
+        } catch (error) {
+            toast.error('Microphone access denied');
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            clearInterval(recordingTimerRef.current);
+        }
+    };
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // Camera Logic
+    const openCamera = async () => {
+        setIsCameraOpen(true);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            setCameraStream(stream);
+            if (videoRef.current) videoRef.current.srcObject = stream;
+        } catch (error) {
+            toast.error('Camera access denied');
+            setIsCameraOpen(false);
+        }
+    };
+
+    const closeCamera = () => {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            setCameraStream(null);
+        }
+        setIsCameraOpen(false);
+    };
+
+    const capturePhoto = async () => {
+        if (!videoRef.current) return;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoRef.current, 0, 0);
+        
+        canvas.toBlob(async (blob) => {
+            const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                setUploading(true);
+                const token = user?.token;
+                const config = {
+                    headers: { Authorization: `Bearer ${token}` }
+                };
+
+                const response = await axios.post('/api/upload', formData, config);
+                handleSendMessage(null, { messageType: 'image', fileUrl: response.data.url });
+                toast.success('Photo sent');
+                closeCamera();
+            } catch (error) {
+                toast.error('Failed to upload photo');
+            } finally {
+                setUploading(false);
+            }
+        }, 'image/jpeg');
     };
 
     // Filter out self and format contacts
@@ -183,6 +309,56 @@ const Chat = () => {
                                 {currentChatUser?.role || 'User'}
                             </p>
 
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Camera Modal */}
+            <AnimatePresence>
+                {isCameraOpen && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-secondary-900/90 backdrop-blur-md"
+                            onClick={closeCamera}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="relative bg-black rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col items-center border border-white/10"
+                        >
+                            <button onClick={closeCamera} className="absolute top-4 right-4 z-50 p-2 bg-white/10 text-white hover:bg-white/20 rounded-xl transition-all">
+                                <X size={24} />
+                            </button>
+                            
+                            <div className="relative w-full aspect-video bg-secondary-900 flex items-center justify-center">
+                                <video 
+                                    ref={videoRef} 
+                                    autoPlay 
+                                    playsInline 
+                                    className="w-full h-full object-cover"
+                                />
+                                {!cameraStream && (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-secondary-400 gap-4">
+                                        <VideoOff size={48} className="animate-pulse" />
+                                        <p className="text-sm font-bold uppercase tracking-widest">Initializing Camera...</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="w-full p-8 bg-black flex items-center justify-center gap-6">
+                                <button 
+                                    onClick={capturePhoto}
+                                    className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-xl group"
+                                >
+                                    <div className="w-12 h-12 bg-white rounded-full group-hover:bg-primary-50 transition-all"></div>
+                                </button>
+                                <p className="absolute bottom-10 text-[10px] text-white/50 font-black uppercase tracking-[0.2em]">Smile & Capture</p>
+                            </div>
                         </motion.div>
                     </div>
                 )}
@@ -316,6 +492,24 @@ const Chat = () => {
                                                 </a>
                                             </div>
                                         )}
+                                        {msg.messageType === 'audio' && (
+                                            <div className={`flex items-center gap-4 p-4 rounded-2xl mb-2 ${isMe ? 'bg-white/15' : 'bg-primary-50'} min-w-[240px] shadow-inner`}>
+                                                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${isMe ? 'bg-white/20' : 'bg-primary-600 text-white shadow-lg shadow-primary-500/20'}`}>
+                                                    <Volume2 size={24} className={isMe ? 'text-white' : 'text-white'} />
+                                                </div>
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="flex justify-between items-center px-1">
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest ${isMe ? 'text-white/70' : 'text-primary-600'}`}>Voice Note</span>
+                                                        <span className={`text-[9px] font-bold ${isMe ? 'text-white/50' : 'text-secondary-400'}`}>0:00 / 0:15</span>
+                                                    </div>
+                                                    <audio 
+                                                        src={msg.fileUrl} 
+                                                        controls 
+                                                        className={`h-7 w-full scale-95 origin-left ${isMe ? 'filter-white-controls opacity-90' : 'opacity-80'}`}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
                                         {msg.messageType === 'call' && (
                                             <div className={`flex flex-col gap-4 p-5 rounded-2xl mb-2 ${isMe ? 'bg-white/10 border border-white/20' : 'bg-primary-50 border border-primary-100'}`}>
                                                 <div className="flex items-center gap-4">
@@ -412,17 +606,25 @@ const Chat = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                    className={`p-2.5 rounded-xl transition-all ${showEmojiPicker ? 'bg-primary-50 text-primary-600' : 'text-secondary-400 hover:text-primary-600 hover:bg-white'}`}
+                                    className={`p-2.5 rounded-xl transition-all ${showEmojiPicker ? 'bg-primary-50 text-primary-600' : 'text-secondary-400 hover:text-primary-600 hover:bg-white'} ${isRecording ? 'hidden' : ''}`}
                                 >
                                     <Smile size={20} />
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="p-2.5 text-secondary-400 hover:text-primary-600 hover:bg-white rounded-xl transition-all"
+                                    className={`p-2.5 text-secondary-400 hover:text-primary-600 hover:bg-white rounded-xl transition-all ${isRecording ? 'hidden' : ''}`}
                                     disabled={uploading}
                                 >
                                     <Paperclip size={20} className={uploading ? 'animate-pulse' : ''} />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={openCamera}
+                                    className={`p-2.5 text-secondary-400 hover:text-primary-600 hover:bg-white rounded-xl transition-all ${isRecording ? 'hidden' : ''}`}
+                                    disabled={uploading}
+                                >
+                                    <Camera size={20} />
                                 </button>
                                 <input
                                     type="file"
@@ -431,14 +633,44 @@ const Chat = () => {
                                     onChange={handleFileUpload}
                                 />
                             </div>
-                            <input
-                                type="text"
-                                placeholder={uploading ? "Uploading file..." : "Write a professional message..."}
-                                className="flex-1 border-none focus:ring-0 text-sm font-medium bg-transparent placeholder:text-secondary-400 text-secondary-900"
-                                value={content}
-                                onChange={(e) => setContent(e.target.value)}
-                                disabled={uploading}
-                            />
+                            {isRecording ? (
+                                <div className="flex-1 flex items-center justify-between px-6 bg-red-50 border border-red-100 rounded-xl py-3 animate-pulse shadow-inner">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-3 h-3 bg-red-600 rounded-full animate-ping"></div>
+                                        <div className="flex flex-col">
+                                            <span className="text-red-700 font-black text-[10px] uppercase tracking-[0.2em] leading-none mb-1">Live Capture</span>
+                                            <span className="text-red-900 font-black text-lg tracking-widest font-mono">{formatTime(recordingTime)}</span>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        type="button"
+                                        onClick={stopRecording}
+                                        className="flex items-center gap-2 px-5 py-2 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-red-700 transition-all shadow-lg"
+                                    >
+                                        <StopCircle size={14} fill="white" />
+                                        End & Send
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    <input
+                                        type="text"
+                                        placeholder={uploading ? "Processing transmission..." : "Write a professional message..."}
+                                        className="flex-1 border-none focus:ring-0 text-sm font-medium bg-transparent placeholder:text-secondary-400 text-secondary-900"
+                                        value={content}
+                                        onChange={(e) => setContent(e.target.value)}
+                                        disabled={uploading}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={startRecording}
+                                        className="p-2.5 text-secondary-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
+                                        disabled={uploading}
+                                    >
+                                        <Mic size={22} />
+                                    </button>
+                                </>
+                            )}
                             <button
                                 type="submit"
                                 disabled={(!content.trim() && !uploading) || uploading}

@@ -7,6 +7,7 @@ import studentReducer from './slices/studentSlice';
 import appointmentReducer from './slices/appointmentSlice';
 import messageReducer from './slices/messageSlice';
 import notificationReducer from './slices/notificationSlice';
+import registryReducer from './slices/registrySlice';
 
 export const store = configureStore({
     reducer: {
@@ -18,5 +19,6 @@ export const store = configureStore({
         appointments: appointmentReducer,
         messages: messageReducer,
         notifications: notificationReducer,
+        registry: registryReducer
     },
 });

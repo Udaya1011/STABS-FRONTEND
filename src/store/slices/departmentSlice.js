@@ -77,11 +77,22 @@ export const departmentSlice = createSlice({
                 state.isLoading = false;
                 state.departments.push(action.payload);
             })
+            .addCase(createDepartment.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
             // Update Department
+            .addCase(updateDepartment.pending, (state) => { state.isLoading = true; })
             .addCase(updateDepartment.fulfilled, (state, action) => {
                 state.isLoading = false;
                 const index = state.departments.findIndex(d => d._id === action.payload._id);
                 if (index !== -1) state.departments[index] = action.payload;
+            })
+            .addCase(updateDepartment.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
             })
             // Delete Department
             .addCase(deleteDepartment.fulfilled, (state, action) => {
