@@ -3,7 +3,7 @@ import { Bell, HelpCircle, Sun, Moon, Menu, CheckCheck, Clock, MessageSquare, Ca
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { resetNotifications, markNotificationRead } from '../../store/slices/notificationSlice';
+import { getMyNotifications, markAsRead, reset as resetNotifications } from '../../store/slices/notificationSlice';
 import getImageUrl from '../../utils/imageUtils';
 
 const Navbar = ({ isCollapsed, setIsCollapsed }) => {
