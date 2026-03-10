@@ -168,6 +168,7 @@ const Register = () => {
                                         >
                                             <option value="student">Student Scholar</option>
                                             <option value="teacher">Expert Faculty</option>
+                                            <option value="staff">Office Staff</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">

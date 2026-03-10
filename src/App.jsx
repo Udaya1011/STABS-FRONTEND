@@ -13,6 +13,7 @@ import Appointments from './pages/Appointments';
 import Chat from './pages/Chat';
 import Videos from './pages/Videos';
 import Profile from './pages/Profile';
+import Attendance from './pages/Attendance';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
 import SocketListener from './components/common/SocketListener';
@@ -45,6 +46,7 @@ function App() {
             <Route path="chat/:userId" element={<Chat />} />
             <Route path="videos" element={<Videos />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="attendance" element={<Attendance />} />
           </Route>
         </Routes>
         <Toaster position="top-right" />

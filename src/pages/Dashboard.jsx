@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
     Users,
     Calendar,
@@ -14,7 +15,8 @@ import {
     GraduationCap,
     Plus,
     X,
-    Save
+    Save,
+    ClipboardList
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getStudents } from '../store/slices/studentSlice';
@@ -124,6 +126,8 @@ const Dashboard = () => {
             .catch(err => toast.error(err));
     };
 
+    const navigate = useNavigate();
+
     return (
         <div className="space-y-8 pb-10">
             {/* Header Section */}
@@ -136,28 +140,33 @@ const Dashboard = () => {
                         Systems online. Welcome back, <span className="text-secondary-900 font-bold uppercase">{user?.name}</span>.
                     </p>
                 </div>
-                <div className="flex gap-3 w-full lg:w-auto">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-white border border-secondary-100 rounded-xl shadow-sm">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-secondary-500">Live Server Port: 5005</span>
+                
+                {/* FAST ACCESS BUTTON */}
+                <div className="flex items-center gap-4 w-full lg:w-auto">
+                    <button 
+                        onClick={() => navigate('/attendance')}
+                        className="group flex-1 lg:flex-none bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl shadow-primary-600/30 active:scale-95 transition-all border-b-4 border-primary-800"
+                    >
+                        <div className="p-2 bg-white/10 rounded-xl group-hover:rotate-12 transition-transform">
+                            <ClipboardList size={22} className="text-white" />
+                        </div>
+                        <span className="whitespace-nowrap">Mark Attendance</span>
+                        <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                    
+                    <div className="hidden xl:flex items-center gap-2 px-6 py-4 bg-white border border-secondary-100 rounded-[2rem] shadow-sm">
+                        <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary-500">Node Sync: 5005</span>
                     </div>
                 </div>
+
                 {user?.role === 'teacher' && (
                     <div className="flex gap-3">
                         <button 
-                            onClick={() => dispatch(syncMyFreeSlots()).unwrap().then((res) => {
-                                toast.success(res.message || 'Slots synced!');
-                                dispatch(getMyAppointments());
-                            })}
-                            className="btn-secondary flex items-center gap-2 shadow-sm"
-                        >
-                            <TrendingUp size={18} /> Sync Slots
-                        </button>
-                        <button 
                             onClick={handleOpenTimetableModal}
-                            className="btn-primary flex items-center gap-2 shadow-lg"
+                            className="bg-secondary-900 hover:bg-black text-white px-6 py-4 rounded-[2rem] font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-xl"
                         >
-                            <Calendar size={18} /> Manage My Timetable
+                            <Calendar size={18} /> Manage My Schedule
                         </button>
                     </div>
                 )}

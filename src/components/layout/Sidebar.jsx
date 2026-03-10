@@ -13,7 +13,8 @@ import {
     ChevronLeft,
     GraduationCap,
     BookOpen,
-    Building2
+    Building2,
+    ClipboardList
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
@@ -36,10 +37,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         { name: 'Subjects', icon: BookOpen, path: '/subjects', roles: ['admin', 'student'] },
         { name: 'Teachers', icon: Users, path: '/teachers', roles: ['admin', 'teacher', 'student'] },
         { name: 'Students', icon: GraduationCap, path: '/students', roles: ['admin', 'teacher'] },
-        { name: 'Appointments', icon: Calendar, path: '/appointments', roles: ['admin', 'teacher', 'student'] },
-        { name: 'Messages', icon: MessageSquare, path: '/chat', roles: ['admin', 'teacher', 'student'] },
-        { name: 'Resources', icon: Video, path: '/videos', roles: ['admin', 'teacher', 'student'] },
-        { name: 'My Profile', icon: User, path: '/profile', roles: ['admin', 'teacher', 'student'] },
+        { name: 'Appointments', icon: Calendar, path: '/appointments', roles: ['admin', 'teacher', 'student', 'staff'] },
+        { name: 'Attendance', icon: ClipboardList, path: '/attendance', roles: ['admin', 'teacher', 'staff', 'student'] },
+        { name: 'Messages', icon: MessageSquare, path: '/chat', roles: ['admin', 'teacher', 'student', 'staff'] },
+        { name: 'Resources', icon: Video, path: '/videos', roles: ['admin', 'teacher', 'student', 'staff'] },
+        { name: 'My Profile', icon: User, path: '/profile', roles: ['admin', 'teacher', 'student', 'staff'] },
     ];
 
     const filteredItems = menuItems.filter(item => item.roles.includes(user?.role));
@@ -123,6 +125,17 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                         </NavLink>
                     ))}
                 </nav>
+
+                {/* QUICK ACTION BUTTON */}
+                <div className="px-4 mb-2">
+                    <button
+                        onClick={() => navigate('/attendance')}
+                        className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-primary-50 text-primary-600 hover:bg-primary-600 hover:text-white transition-all font-black text-[10px] uppercase tracking-[0.2em] group shadow-sm border border-primary-100 hover:border-primary-700 hover:shadow-lg hover:shadow-primary-600/20`}
+                    >
+                        <ClipboardList size={22} className="group-hover:scale-110 transition-transform" />
+                        {!isCollapsed && <span>Open Attendance</span>}
+                    </button>
+                </div>
 
                 <div className="p-4 border-t border-secondary-100 bg-white">
                     {!isCollapsed && (
