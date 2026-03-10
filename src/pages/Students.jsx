@@ -5,6 +5,7 @@ import { getDepartments } from '../store/slices/departmentSlice';
 import { Search, Mail, Calendar, GraduationCap, Plus, Users, X, Save, Edit2, Trash2, Key, Hash, Layers, Eye, Info, UserCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import getImageUrl from '../utils/imageUtils';
 
 const Students = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -177,7 +178,7 @@ const Students = () => {
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-full bg-secondary-50 flex items-center justify-center text-sm font-bold text-secondary-400 group-hover:bg-primary-600 group-hover:text-white transition-all shadow-sm shrink-0 overflow-hidden uppercase border border-secondary-100">
                                                     {s.user?.avatar && !s.user.avatar.includes('default.png') ? (
-                                                        <img src={s.user.avatar} alt={s.user.name} className="w-full h-full object-cover" />
+                                                        <img src={getImageUrl(s.user.avatar)} alt={s.user.name} className="w-full h-full object-cover" />
                                                     ) : (
                                                         s.user?.name?.charAt(0) || s.registerNumber?.charAt(0) || 'S'
                                                     )}

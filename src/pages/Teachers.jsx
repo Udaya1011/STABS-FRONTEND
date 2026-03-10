@@ -7,6 +7,7 @@ import { getDepartments } from '../store/slices/departmentSlice';
 import { getSubjects } from '../store/slices/subjectSlice';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
+import getImageUrl from '../utils/imageUtils';
 
 const Teachers = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -245,7 +246,7 @@ const Teachers = () => {
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-full bg-secondary-50 flex items-center justify-center text-sm font-bold text-secondary-400 group-hover:bg-primary-600 group-hover:text-white transition-all shadow-sm shrink-0 overflow-hidden uppercase border border-secondary-100">
                                                     {teacher.user?.avatar && !teacher.user.avatar.includes('default.png') ? (
-                                                        <img src={teacher.user.avatar} alt={teacher.user.name} className="w-full h-full object-cover" />
+                                                        <img src={getImageUrl(teacher.user.avatar)} alt={teacher.user.name} className="w-full h-full object-cover" />
                                                     ) : (
                                                         teacher.user?.name?.charAt(0)
                                                     )}
@@ -445,7 +446,7 @@ const Teachers = () => {
                                     <div className="relative group">
                                         <div className="absolute -inset-4 bg-gradient-to-tr from-primary-500 to-primary-100 rounded-[3rem] opacity-20 group-hover:opacity-30 transition-opacity blur-xl"></div>
                                         <img
-                                            src={selectedTeacher.user?.avatar}
+                                            src={getImageUrl(selectedTeacher.user?.avatar)}
                                             alt={selectedTeacher.user?.name}
                                             className="w-56 h-72 object-cover rounded-[2rem] shadow-2xl relative z-10 border-4 border-white grayscale group-hover:grayscale-0 transition-all duration-500"
                                         />

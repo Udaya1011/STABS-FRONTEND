@@ -3,7 +3,8 @@ import { Bell, HelpCircle, Sun, Moon, Menu, CheckCheck, Clock, MessageSquare, Ca
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getMyNotifications, markAsRead } from '../../store/slices/notificationSlice';
+import { resetNotifications, markNotificationRead } from '../../store/slices/notificationSlice';
+import getImageUrl from '../../utils/imageUtils';
 
 const Navbar = ({ isCollapsed, setIsCollapsed }) => {
     const dispatch = useDispatch();
@@ -395,7 +396,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                         className="w-10 h-10 rounded-xl bg-primary-100 border border-primary-200 shadow-sm overflow-hidden cursor-pointer flex items-center justify-center font-bold text-primary-700 uppercase"
                     >
                         {user?.avatar && !user.avatar.includes('default.png') ? (
-                            <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                            <img src={getImageUrl(user.avatar)} alt={user.name} className="w-full h-full object-cover" />
                         ) : (
                             user?.name?.charAt(0)
                         )}

@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import io from 'socket.io-client';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import getImageUrl from '../utils/imageUtils';
 
 const Chat = () => {
     const { userId } = useParams();
@@ -298,7 +299,7 @@ const Chat = () => {
                             </button>
                             <div className="w-40 h-40 rounded-3xl overflow-hidden shadow-xl bg-primary-50 text-primary-600 flex items-center justify-center text-5xl font-bold mb-6 border-4 border-white ring-4 ring-primary-50 relative group">
                                 {currentChatUser?.avatar && !currentChatUser.avatar.includes('default.png') ? (
-                                    <img src={currentChatUser.avatar} alt={currentChatUser.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                    <img src={getImageUrl(currentChatUser.avatar)} alt={currentChatUser.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                 ) : (
                                     currentChatUser?.name?.charAt(0) || 'U'
                                 )}
@@ -388,7 +389,7 @@ const Chat = () => {
                             <div className="relative">
                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold shadow-sm overflow-hidden ${contact.isTeacher ? 'bg-primary-50 text-primary-600' : 'bg-secondary-100 text-secondary-500'}`}>
                                     {contact.avatar && !contact.avatar.includes('default.png') ? (
-                                        <img src={contact.avatar} alt={contact.name} className="w-full h-full object-cover" />
+                                        <img src={getImageUrl(contact.avatar)} alt={contact.name} className="w-full h-full object-cover" />
                                     ) : (
                                         contact.name.charAt(0)
                                     )}
@@ -421,7 +422,7 @@ const Chat = () => {
                         <div className="flex items-center gap-4 cursor-pointer group" onClick={() => setShowProfileModal(true)}>
                             <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center font-bold text-primary-600 transition-all overflow-hidden group-hover:ring-2 group-hover:ring-primary-300 group-hover:ring-offset-2">
                                 {currentChatUser?.avatar && !currentChatUser.avatar.includes('default.png') ? (
-                                    <img src={currentChatUser.avatar} alt={currentChatUser.name} className="w-full h-full object-cover" />
+                                    <img src={getImageUrl(currentChatUser.avatar)} alt={currentChatUser.name} className="w-full h-full object-cover" />
                                 ) : (
                                     currentChatUser?.name?.charAt(0) || 'U'
                                 )}
@@ -468,7 +469,7 @@ const Chat = () => {
                                     <div className={`max-w-[80%] ${isMe ? 'bg-primary-600 text-white rounded-2xl rounded-tr-none shadow-md' : 'bg-white text-secondary-800 rounded-2xl rounded-tl-none border border-secondary-100 shadow-sm'} p-4 relative group transition-colors`}>
                                         {msg.messageType === 'image' && (
                                             <div className="mb-2 rounded-lg overflow-hidden border border-secondary-100">
-                                                <img src={msg.fileUrl} alt="chat" className="max-w-full h-auto max-h-64 object-cover" />
+                                                <img src={getImageUrl(msg.fileUrl)} alt="chat" className="max-w-full h-auto max-h-64 object-cover" />
                                             </div>
                                         )}
                                         {msg.messageType === 'file' && (

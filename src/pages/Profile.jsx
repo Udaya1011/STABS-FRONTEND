@@ -4,6 +4,7 @@ import { Mail, Phone, MapPin, Shield, Camera, Edit2, Check, X, ShieldCheck, Grad
 import { toast } from 'react-hot-toast';
 import { updateProfile } from '../store/slices/authSlice';
 import axios from 'axios';
+import getImageUrl from '../utils/imageUtils';
 
 const Profile = () => {
     const { user, isLoading: isUpdating } = useSelector((state) => state.auth);
@@ -130,7 +131,7 @@ const Profile = () => {
                                         <Loader2 className="animate-spin text-primary-500" size={40} />
                                     ) : user?.avatar && !user.avatar.includes('default.png') ? (
                                         <img
-                                            src={user.avatar}
+                                            src={getImageUrl(user.avatar)}
                                             alt={user.name}
                                             className="w-full h-full object-cover"
                                         />
