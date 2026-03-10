@@ -84,7 +84,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
     };
 
     return (
-        <nav className="h-24 px-4 md:px-6 flex items-center justify-between sticky top-0 z-20 bg-white/70 backdrop-blur-md border-b border-secondary-100 shadow-sm transition-colors duration-300">
+        <nav className="h-24 px-4 md:px-6 flex items-center justify-between sticky top-0 z-20 bg-white/70 backdrop-blur-md border-b border-secondary-100 transition-colors duration-300">
             <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className="md:hidden p-2 -ml-2 mr-2 text-secondary-500 hover:bg-secondary-50 rounded-xl transition-colors"
@@ -92,14 +92,17 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                 <Menu size={24} />
             </button>
 
-            <div className="hidden md:flex flex-1 max-w-xl items-center pl-2">
-                <div className="flex flex-col justify-center">
-                    <h1 className="text-2xl font-extrabold text-primary-600 tracking-tight leading-none mb-0.5">
-                        {getPageInfo().title}
-                    </h1>
-                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em]">
-                        {getPageInfo().subtitle}
-                    </p>
+            <div className="hidden md:flex flex-1 items-center">
+                <div className="flex items-center gap-4 py-1">
+                    <div className="w-1 h-8 bg-primary-600 rounded-full" />
+                    <div className="flex flex-col justify-center">
+                        <h1 className="text-2xl font-black text-primary-600 tracking-tight leading-none mb-1">
+                            {getPageInfo().title}
+                        </h1>
+                        <p className="text-[9px] font-black text-secondary-900 uppercase tracking-[0.2em]">
+                            {getPageInfo().subtitle}
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -137,7 +140,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                                 </div>
                                                 <div className="flex justify-between items-center bg-secondary-50/50 p-3 rounded-xl border border-secondary-50">
                                                     <span className="text-xs font-bold text-secondary-500 uppercase tracking-widest">Total Rooms</span>
-                                                    <span className="text-sm font-black text-accent-purple">{departments?.reduce((sum, d) => sum + (d.classrooms?.length || 0), 0) || 0}</span>
+                                                    <span className="text-sm font-black text-primary-600">{departments?.reduce((sum, d) => sum + (d.classrooms?.length || 0), 0) || 0}</span>
                                                 </div>
                                             </div>
                                         </motion.div>
@@ -329,12 +332,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                                                     {data.count > 0 && (
                                                                         <div className="relative flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform ml-2">
                                                                             <div
-                                                                                style={{ backgroundColor: '#751515ff' }}
-                                                                                className="absolute inset-0 rounded-full blur-[6px] opacity-40 animate-pulse"
-                                                                            ></div>
-                                                                            <div
-                                                                                style={{ background: 'linear-gradient(135deg, #691212ff 0%, #6b0f0fff 100%)' }}
-                                                                                className="w-6 h-6 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-xl border-[1.5px] border-white relative z-10 leading-none"
+                                                                                className="w-6 h-6 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-md border-[1.5px] border-white relative z-10 leading-none bg-primary-600"
                                                                             >
                                                                                 {data.count}
                                                                             </div>
@@ -389,7 +387,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
 
                 <div className="flex items-center gap-3 pl-2 border-l border-secondary-100 ml-1">
                     <div className="text-right hidden lg:block">
-                        <p className="text-sm font-bold text-secondary-900 leading-tight">Hello, {user?.name?.split(' ')[0]}</p>
+                        <p className="text-sm font-black text-primary-600 leading-tight uppercase tracking-tight">Hello, {user?.name?.split(' ')[0]}</p>
                         <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">{user?.role}</p>
                     </div>
                     <motion.div

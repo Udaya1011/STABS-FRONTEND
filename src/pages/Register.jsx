@@ -60,13 +60,8 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen relative overflow-hidden bg-secondary-50 flex items-center justify-center p-4 md:p-8">
-            {/* Animated Mesh Background */}
-            <div className="absolute inset-0 bg-mesh-gradient -z-10 opacity-70"></div>
-
-            {/* Decorative Blobs */}
-            <div className="absolute top-[15%] left-[10%] w-72 h-72 bg-primary-200/20 rounded-full blur-3xl animate-pulse-soft"></div>
-            <div className="absolute bottom-[10%] right-[10%] w-96 h-96 bg-primary-300/10 rounded-full blur-3xl animate-pulse-soft" style={{ animationDelay: '3s' }}></div>
+        <div className="min-h-screen relative overflow-hidden bg-white flex items-center justify-center p-4 md:p-8">
+            {/* Clean Background */}
 
             <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
                 {/* Branding Section */}

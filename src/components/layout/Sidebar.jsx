@@ -26,6 +26,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
 
     const handleLogout = () => {
         dispatch(logout());
+        setIsCollapsed(true);
         navigate('/login');
     };
 
@@ -54,10 +55,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             <motion.aside
                 initial={false}
                 animate={{ width: isCollapsed ? '80px' : '20vw' }}
-                className={`fixed left-0 top-0 h-screen bg-white text-secondary-600 flex flex-col z-40 transition-transform md:translate-x-0 duration-300 ${isCollapsed ? '-translate-x-full' : 'translate-x-0'} border-r border-secondary-100 shadow-sm`}
+                className={`fixed left-0 top-0 h-screen bg-white text-secondary-600 flex flex-col z-40 transition-transform md:translate-x-0 duration-300 ${isCollapsed ? '-translate-x-full' : 'translate-x-0'} border-r border-secondary-100`}
             >
                 {/* Sidebar Header - Highlighted */}
-                <div className="p-6 flex items-center justify-between bg-primary-600 border-b border-primary-700 shadow-sm">
+                <div className="p-6 flex items-center justify-between bg-primary-600 border-b border-primary-700">
                     <div className="flex items-center gap-3 overflow-hidden">
                         <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center flex-shrink-0 border border-white/20">
                             <GraduationCap className="text-white" size={24} />
@@ -68,7 +69,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                                 animate={{ opacity: 1 }}
                                 className="text-white font-display font-black text-xl tracking-tight"
                             >
-                                RVS CAS
+                                RVSCAS
                             </motion.span>
                         )}
                     </div>
@@ -77,7 +78,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 {/* Toggle Arrow Button */}
                 <button
                     onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="absolute -right-3 top-20 w-6 h-6 bg-white text-secondary-400 hover:text-primary-600 rounded-full hidden md:flex items-center justify-center shadow-md border border-secondary-100 group z-50 transition-colors"
+                    className="absolute -right-3 top-20 w-6 h-6 bg-white text-secondary-400 hover:text-primary-600 rounded-full hidden md:flex items-center justify-center border border-secondary-100 group z-50 transition-colors"
                 >
                     {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
                 </button>
@@ -90,6 +91,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                         <NavLink
                             key={item.name}
                             to={item.path}
+                            onClick={() => setIsCollapsed(true)}
                             className={({ isActive }) => `
               flex items-center gap-4 px-3 py-3 rounded-xl transition-all group relative
               ${isActive
@@ -122,10 +124,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-secondary-100 bg-secondary-50/50">
+                <div className="p-4 border-t border-secondary-100 bg-white">
                     {!isCollapsed && (
-                        <div className="mb-4 px-3 py-3 bg-white rounded-2xl flex items-center gap-3 border border-secondary-100 hover:border-primary-200 transition-colors cursor-pointer shadow-sm">
-                            <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-lg border border-primary-200 overflow-hidden">
+                        <div className="mb-4 px-3 py-3 bg-secondary-50/50 rounded-2xl flex items-center gap-3 border border-secondary-100 hover:border-primary-200 hover:bg-white transition-all cursor-pointer shadow-sm">
+                            <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center text-white font-bold text-lg border border-primary-700 overflow-hidden shadow-sm">
                                 {user?.avatar && !user.avatar.includes('default.png') ? (
                                     <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                                 ) : (
@@ -140,10 +142,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                     )}
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-4 px-3 py-3 rounded-xl hover:bg-red-50 hover:text-red-600 text-secondary-500 transition-all font-semibold group"
+                        className="w-full flex items-center gap-4 px-4 py-3 rounded-xl bg-primary-600 text-white hover:bg-primary-700 transition-all font-bold group shadow-md hover:shadow-lg border border-primary-700"
                     >
-                    <LogOut size={22} className="group-hover:text-red-600" />
-                    {!isCollapsed && <span className="text-sm">Logout</span>}
+                        <LogOut size={20} className="text-white group-hover:scale-110 transition-transform" />
+                        {!isCollapsed && <span className="text-sm tracking-wide">Logout Session</span>}
                     </button>
                 </div>
             </motion.aside>

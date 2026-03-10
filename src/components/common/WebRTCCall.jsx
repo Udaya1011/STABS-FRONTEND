@@ -1,0 +1,499 @@
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Phone, PhoneOff, Mic, MicOff, Volume2, User, Loader2, Video, VideoOff } from 'lucide-react';
+import io from 'socket.io-client';
+import { toast } from 'react-hot-toast';
+import { sendMessage } from '../../store/slices/messageSlice';
+
+const WebRTCCall = () => {
+    const dispatch = useDispatch();
+    const { user } = useSelector((state) => state.auth);
+    const [socket, setSocket] = useState(null);
+    const socketRef = useRef(null);
+    const [callState, setCallState] = useState('idle'); // idle, ringing, calling, connected
+    const [isCaller, setIsCaller] = useState(false);
+    const [partner, setPartner] = useState(null);
+    const [isMuted, setIsMuted] = useState(false);
+    const [isVideoOff, setIsVideoOff] = useState(false);
+    const [callType, setCallType] = useState('voice'); // 'voice' or 'video'
+    const [duration, setDuration] = useState(0);
+    
+    const peerConnection = useRef(null);
+    const localStream = useRef(null);
+    const remoteAudio = useRef(new Audio());
+    const remoteStreamRef = useRef(null);
+    const localVideoRef = useRef(null);
+    const remoteVideoRef = useRef(null);
+    const receiverRingtone = useRef(new Audio('/custom-ringtone.mpeg'));
+    const callerRingtone = useRef(new Audio('/MESSAGE-RINGTONE.mp3'));
+    const timerRef = useRef(null);
+
+    useEffect(() => {
+        callerRingtone.current.loop = true;
+    }, []);
+
+    useEffect(() => {
+        const currentReceiverRingtone = receiverRingtone.current;
+        const handleEnded = () => {
+            if (partner && socketRef.current) {
+                socketRef.current.emit('rtc-end', { to: partner.id });
+            }
+            endCallLocally();
+        };
+        currentReceiverRingtone.addEventListener('ended', handleEnded);
+        
+        return () => {
+            currentReceiverRingtone.removeEventListener('ended', handleEnded);
+        };
+    }, [partner]);
+
+    useEffect(() => {
+        let isCancelled = false;
+
+        const stopAudio = () => {
+            if (receiverRingtone.current) {
+                receiverRingtone.current.pause();
+                receiverRingtone.current.currentTime = 0;
+            }
+            if (callerRingtone.current) {
+                callerRingtone.current.pause();
+                callerRingtone.current.currentTime = 0;
+            }
+        };
+
+        const playAudio = async (audio) => {
+            try {
+                audio.currentTime = 0;
+                await audio.play();
+                if (isCancelled || (callState !== 'ringing' && callState !== 'calling')) {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }
+            } catch (e) {
+                console.log('Audio play failed:', e);
+            }
+        };
+
+        if (callState === 'ringing') {
+            playAudio(receiverRingtone.current);
+        } else if (callState === 'calling') {
+            playAudio(callerRingtone.current);
+        } else {
+            stopAudio();
+            isCancelled = true;
+        }
+
+        return () => {
+            isCancelled = true;
+            stopAudio();
+        };
+    }, [callState]);
+
+    const configuration = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+    };
+
+    useEffect(() => {
+        if (!user) return;
+        const s = io('/');
+        setSocket(s);
+        socketRef.current = s;
+
+        s.on('connect', () => {
+            s.emit('join', user._id);
+        });
+        s.emit('join', user._id);
+
+        s.on('rtc-offer', async ({ from, offer, senderName, callType: incomingType }) => {
+            setPartner({ id: from, name: senderName });
+            setCallType(incomingType || 'voice');
+            setCallState('ringing');
+            setIsCaller(false);
+            peerConnection.current = createPeerConnection(from, incomingType || 'voice');
+            await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
+        });
+
+        s.on('rtc-answer', async ({ answer }) => {
+            if (peerConnection.current) {
+                await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+                setCallState('connected');
+                startTimer();
+            }
+        });
+
+        s.on('rtc-candidate', async ({ candidate }) => {
+            if (peerConnection.current) {
+                await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+            }
+        });
+
+        s.on('rtc-end', () => {
+            endCallLocally();
+        });
+
+        return () => {
+            s.close();
+            endCallLocally();
+        };
+    }, [user?._id]);
+
+    const startTimer = () => {
+        setDuration(0);
+        timerRef.current = setInterval(() => {
+            setDuration(prev => prev + 1);
+        }, 1000);
+    };
+
+    const formatTime = (s) => {
+        const mins = Math.floor(s / 60);
+        const secs = s % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const createPeerConnection = (targetId, currentCallType) => {
+        const pc = new RTCPeerConnection(configuration);
+
+        pc.onicecandidate = (event) => {
+            if (event.candidate && socketRef.current) {
+                socketRef.current.emit('rtc-candidate', { 
+                    to: targetId, 
+                    from: user?._id,
+                    candidate: event.candidate 
+                });
+            }
+        };
+
+        pc.ontrack = (event) => {
+            if (currentCallType === 'video') {
+                remoteStreamRef.current = event.streams[0];
+                if (remoteVideoRef.current && !remoteVideoRef.current.srcObject) {
+                    remoteVideoRef.current.srcObject = event.streams[0];
+                }
+            } else {
+                remoteAudio.current.srcObject = event.streams[0];
+                remoteAudio.current.play().catch(e => console.log('Audio play failed:', e));
+            }
+        };
+
+        return pc;
+    };
+
+    const startCall = async (targetUser, type = 'voice') => {
+        try {
+            setPartner(targetUser);
+            setCallType(type);
+            setCallState('calling');
+            setIsCaller(true);
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+            localStream.current = stream;
+            
+            peerConnection.current = createPeerConnection(targetUser.id, type);
+            stream.getTracks().forEach(track => peerConnection.current.addTrack(track, stream));
+
+            // Wait for next tick so that localVideoRef resolves if switching to connected state
+            if (type === 'video') {
+                setTimeout(() => {
+                    if (localVideoRef.current) {
+                        localVideoRef.current.srcObject = stream;
+                    }
+                }, 100);
+            }
+
+            const offer = await peerConnection.current.createOffer();
+            await peerConnection.current.setLocalDescription(offer);
+
+            if (socketRef.current) {
+                socketRef.current.emit('rtc-offer', { 
+                    to: targetUser.id, 
+                    from: user._id,
+                    offer, 
+                    senderName: user.name,
+                    callType: type
+                });
+            }
+        } catch (err) {
+            toast.error(`Could not access microphone${type === 'video' ? ' or camera' : ''}`);
+            endCallLocally();
+        }
+    };
+
+    const answerCall = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === 'video' });
+            localStream.current = stream;
+            
+            stream.getTracks().forEach(track => peerConnection.current.addTrack(track, stream));
+
+            if (callType === 'video') {
+                setTimeout(() => {
+                    if (localVideoRef.current) {
+                        localVideoRef.current.srcObject = stream;
+                    }
+                }, 100);
+            }
+
+            const answer = await peerConnection.current.createAnswer();
+            await peerConnection.current.setLocalDescription(answer);
+
+            if (socketRef.current) {
+                socketRef.current.emit('rtc-answer', { 
+                    to: partner.id, 
+                    from: user?._id,
+                    answer 
+                });
+            }
+            if (receiverRingtone.current) receiverRingtone.current.pause();
+            if (callerRingtone.current) callerRingtone.current.pause();
+            setCallState('connected');
+            startTimer();
+        } catch (err) {
+            toast.error(`Microphone${callType === 'video' ? '/Camera' : ''} access failed`);
+            rejectCall();
+        }
+    };
+
+    const rejectCall = () => {
+        if (partner && socketRef.current) {
+            socketRef.current.emit('rtc-end', { to: partner.id });
+        }
+        endCallLocally();
+    };
+
+    const endCallLocally = () => {
+        if (isCaller && partner) {
+            if (duration > 0 || callState === 'connected') {
+                dispatch(sendMessage({
+                    receiver: partner.id,
+                    content: `Direct ${callType} call ended • Duration: ${formatTime(duration)}`,
+                    messageType: 'call',
+                    fileUrl: null
+                }));
+            } else if (callState === 'calling' || callState === 'ringing') {
+                dispatch(sendMessage({
+                    receiver: partner.id,
+                    content: `Missed direct ${callType} call`,
+                    messageType: 'call',
+                    fileUrl: null
+                }));
+            }
+        }
+
+        if (localStream.current) {
+            localStream.current.getTracks().forEach(track => track.stop());
+            localStream.current = null;
+        }
+        if (peerConnection.current) {
+            peerConnection.current.close();
+            peerConnection.current = null;
+        }
+        remoteAudio.current.srcObject = null;
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+        if (localVideoRef.current) localVideoRef.current.srcObject = null;
+        remoteStreamRef.current = null;
+        
+        if (receiverRingtone.current) receiverRingtone.current.pause();
+        if (callerRingtone.current) callerRingtone.current.pause();
+
+        clearInterval(timerRef.current);
+        setCallState('idle');
+        setPartner(null);
+        setDuration(0);
+        setIsCaller(false);
+        setIsMuted(false);
+        setIsVideoOff(false);
+    };
+
+    const toggleMute = () => {
+        if (localStream.current) {
+            const audioTrack = localStream.current.getAudioTracks()[0];
+            if (audioTrack) {
+                audioTrack.enabled = isMuted; // If currently muted, enable it. If not, disable it.
+                setIsMuted(!isMuted);
+            }
+        }
+    };
+
+    const toggleVideo = () => {
+        if (localStream.current && callType === 'video') {
+            const videoTrack = localStream.current.getVideoTracks()[0];
+            if (videoTrack) {
+                videoTrack.enabled = isVideoOff;
+                setIsVideoOff(!isVideoOff);
+            }
+        }
+    };
+
+    useEffect(() => {
+        if (callType === 'video' && callState === 'connected') {
+            if (remoteVideoRef.current && remoteStreamRef.current && !remoteVideoRef.current.srcObject) {
+                remoteVideoRef.current.srcObject = remoteStreamRef.current;
+            }
+            if (localVideoRef.current && localStream.current && !localVideoRef.current.srcObject) {
+                localVideoRef.current.srcObject = localStream.current;
+            }
+        }
+    }, [callState, callType]);
+
+    // Expose startCall to window for Chat.jsx to trigger
+    useEffect(() => {
+        window.initiateCall = (targetUser, type = 'voice') => startCall(targetUser, type);
+        return () => delete window.initiateCall;
+    }, [socket]);
+
+    if (callState === 'idle') return null;
+
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                className="relative bg-white rounded-[40px] shadow-2xl w-full max-w-sm flex flex-col items-center p-12 text-center border overflow-hidden"
+            >
+                {/* Avatar / Video Section */}
+                {callType === 'video' && callState === 'connected' ? (
+                     <div className="relative w-full h-64 bg-secondary-900 rounded-3xl overflow-hidden shadow-xl mb-8 border-4 border-white">
+                        {/* Remote Video */}
+                        <video
+                            ref={remoteVideoRef}
+                            autoPlay
+                            playsInline
+                            className="w-full h-full object-cover"
+                        />
+                        {/* Local Video - PiP */}
+                        <div className="absolute top-2 right-2 w-20 h-28 bg-black rounded-lg overflow-hidden border-2 border-white/50 shadow-lg">
+                            <video
+                                ref={localVideoRef}
+                                autoPlay
+                                playsInline
+                                muted
+                                className="w-full h-full object-cover"
+                            />
+                            {isVideoOff && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-white">
+                                    <VideoOff size={20} />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="relative mb-8 mt-2">
+                        <motion.div 
+                            animate={callState === 'ringing' || callState === 'calling' ? { scale: [1, 1.1, 1] } : {}}
+                            transition={{ repeat: Infinity, duration: 2 }}
+                            className={`w-32 h-32 ${callType === 'video' ? 'bg-purple-50 text-purple-600' : 'bg-primary-50 text-primary-600'} rounded-[40px] flex items-center justify-center shadow-xl relative z-20 border-4 border-white`}
+                        >
+                            {callType === 'video' ? <Video size={64} strokeWidth={1.5} /> : <User size={64} strokeWidth={1.5} />}
+                        </motion.div>
+                        
+                        {(callState === 'ringing' || callState === 'calling') && (
+                            <div className="absolute inset-0 z-0">
+                                <div className={`absolute inset-0 ${callType === 'video' ? 'bg-purple-400' : 'bg-primary-400'} rounded-[40px] animate-ping opacity-20 scale-150`}></div>
+                                <div className={`absolute inset-0 ${callType === 'video' ? 'bg-purple-400' : 'bg-primary-400'} rounded-[40px] animate-ping opacity-10 scale-[2]`}></div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Info Section */}
+                <div className="relative z-10 mb-10 w-full">
+                    <h2 className="text-2xl font-black text-secondary-900 uppercase tracking-tight mb-3 truncate px-2">
+                        {partner?.name || 'Academic Contact'}
+                    </h2>
+                    <div className="flex flex-col items-center gap-2">
+                        <span className={`text-[10px] font-black uppercase tracking-[0.3em] px-5 py-2 rounded-full border ${callState === 'connected' ? 'bg-success-50 text-success-600 border-success-100' : callType === 'video' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-primary-50 text-primary-600 border-primary-100'}`}>
+                            {callState === 'ringing' ? `Incoming ${callType}` : 
+                             callState === 'calling' ? 'Requesting Connection' : 
+                             callState === 'connected' ? `Live Channel • ${formatTime(duration)}` : 'Connecting...'}
+                        </span>
+                        {callState === 'calling' && (
+                            <div className="flex items-center gap-1.5 mt-2 text-secondary-400 italic text-[10px] font-bold uppercase tracking-widest">
+                                <Loader2 size={12} className="animate-spin" /> Node Handshake
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Controls Section */}
+                <div className="flex justify-center gap-6 w-full relative z-10 transition-all">
+                    {callState === 'ringing' || callState === 'calling' ? (
+                        isCaller ? (
+                            <>
+                                <button onClick={toggleMute} className="flex flex-col items-center gap-2 group">
+                                    <div className={`w-14 h-14 ${isMuted ? 'bg-amber-100 text-amber-600' : 'bg-secondary-50 text-secondary-400'} rounded-2xl flex items-center justify-center transition-all shadow-sm`}>
+                                        {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                                    </div>
+                                </button>
+                                {callType === 'video' && (
+                                    <button onClick={toggleVideo} className="flex flex-col items-center gap-2 group">
+                                        <div className={`w-14 h-14 ${isVideoOff ? 'bg-amber-100 text-amber-600' : 'bg-secondary-50 text-secondary-400'} rounded-2xl flex items-center justify-center transition-all shadow-sm`}>
+                                            {isVideoOff ? <VideoOff size={24} /> : <Video size={24} />}
+                                        </div>
+                                    </button>
+                                )}
+                                <button onClick={rejectCall} className="flex flex-col items-center gap-2 group">
+                                    <div className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center transition-all shadow-sm group-hover:bg-red-500 group-hover:text-white">
+                                        <PhoneOff size={24} />
+                                    </div>
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <button onClick={rejectCall} className="flex flex-col items-center gap-2 group">
+                                    <div className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center transition-all shadow-sm group-hover:bg-red-500 group-hover:text-white">
+                                        <PhoneOff size={24} />
+                                    </div>
+                                </button>
+                                <button onClick={answerCall} className="flex flex-col items-center gap-2 group">
+                                    <div className="w-14 h-14 bg-success-500 text-white rounded-2xl flex items-center justify-center transition-all shadow-md animate-bounce">
+                                        {callType === 'video' ? <Video size={24} /> : <Phone size={24} />}
+                                    </div>
+                                </button>
+                            </>
+                        )
+                    ) : (
+                        <>
+                            <button onClick={toggleMute} className="flex flex-col items-center gap-2 group">
+                                <div className={`w-14 h-14 ${isMuted ? 'bg-amber-100 text-amber-600' : 'bg-secondary-50 text-secondary-400'} rounded-2xl flex items-center justify-center transition-all shadow-sm hover:brightness-95`}>
+                                    {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                                </div>
+                            </button>
+                            {callType === 'video' && (
+                                <button onClick={toggleVideo} className="flex flex-col items-center gap-2 group">
+                                    <div className={`w-14 h-14 ${isVideoOff ? 'bg-amber-100 text-amber-600' : 'bg-secondary-50 text-secondary-400'} rounded-2xl flex items-center justify-center transition-all shadow-sm hover:brightness-95`}>
+                                        {isVideoOff ? <VideoOff size={24} /> : <Video size={24} />}
+                                    </div>
+                                </button>
+                            )}
+                            <button onClick={rejectCall} className="flex flex-col items-center gap-2 group">
+                                <div className="w-14 h-14 bg-red-500 text-white rounded-2xl flex items-center justify-center transition-all shadow-md hover:bg-red-600">
+                                    <PhoneOff size={24} />
+                                </div>
+                            </button>
+                        </>
+                    )}
+                </div>
+
+                {/* Footer Micro-detail */}
+                <div className="mt-8 opacity-30 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-secondary-900 rounded-full animate-ping"></div>
+                    <span className="text-[9px] font-black uppercase tracking-[0.4em]">Secure RTC Encryption</span>
+                </div>
+            </motion.div>
+        </div>,
+        document.body
+    );
+};
+
+export default WebRTCCall;

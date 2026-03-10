@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import io from 'socket.io-client';
@@ -8,7 +8,7 @@ import { addNotification } from '../../store/slices/notificationSlice';
 import { getTeachers } from '../../store/slices/teacherSlice';
 import { getStudents } from '../../store/slices/studentSlice';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Calendar } from 'lucide-react';
+import { Calendar, Phone } from 'lucide-react';
 
 const SocketListener = () => {
     const dispatch = useDispatch();
@@ -16,6 +16,12 @@ const SocketListener = () => {
     const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth);
     const { unreadCounts } = useSelector((state) => state.messages);
+    const unreadCountsRef = useRef(unreadCounts);
+    
+    useEffect(() => {
+        unreadCountsRef.current = unreadCounts;
+    }, [unreadCounts]);
+
     const [initialAlertDone, setInitialAlertDone] = useState(false);
     const [notificationSound] = useState(new Audio('/MESSAGE-RINGTONE.mp3'));
     const [soundBlocked, setSoundBlocked] = useState(false);
@@ -37,10 +43,13 @@ const SocketListener = () => {
     }, [notificationSound]);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user?._id) return;
 
         const socket = io('/');
 
+        socket.on('connect', () => {
+            socket.emit('join', user._id);
+        });
         socket.emit('join', user._id);
 
         socket.on('newMessage', (message) => {
@@ -71,7 +80,7 @@ const SocketListener = () => {
                 toast.custom((t) => (
                     <div
                         className={`${t.visible ? 'animate-enter' : 'animate-leave'
-                            } max-w-md w-full bg-white shadow-premium rounded-2xl pointer-events-auto flex flex-col ring-1 ring-black ring-opacity-5 border border-primary-100 overflow-hidden cursor-pointer`}
+                            } max-w-md w-full bg-white shadow-premium rounded-3xl pointer-events-auto flex flex-col ring-8 ring-primary-500/10 border-2 border-primary-200 overflow-hidden cursor-pointer relative`}
                         onClick={() => {
                             if (message.messageType === 'call') {
                                 window.open(message.fileUrl, '_blank');
@@ -81,75 +90,83 @@ const SocketListener = () => {
                             toast.dismiss(t.id);
                         }}
                     >
-                        <div className="p-5 flex items-start gap-4">
+                        {message.messageType === 'call' && (
+                            <div className="absolute inset-0 bg-primary-600/5 animate-pulse pointer-events-none"></div>
+                        )}
+                        <div className="p-6 flex items-start gap-5 relative z-10">
                             <div className="flex-shrink-0">
-                                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-bold text-white shadow-lg ${message.messageType === 'call' ? 'bg-accent-purple animate-pulse' : 'bg-primary-600'}`}>
+                                <div className={`h-16 w-16 rounded-2xl flex items-center justify-center font-bold text-white shadow-2xl ${message.messageType === 'call' ? 'bg-primary-600 animate-bounce' : 'bg-secondary-800'}`}>
                                     {(message.sender?.name || 'U').charAt(0)}
                                 </div>
                             </div>
                             <div className="flex-1">
-                                <p className="text-sm font-black text-secondary-900 uppercase tracking-tighter">
-                                    {message.messageType === 'call' ? '📞 Incoming Call Request' : 'New Portal Message'}
+                                <p className="text-[10px] font-black text-primary-600 uppercase tracking-[0.2em] mb-1">
+                                    {message.messageType === 'call' ? '⚡ Priority Direct Call' : 'New Transmission'}
                                 </p>
+                                <h4 className="text-lg font-black text-secondary-900 uppercase tracking-tight">
+                                    {message.sender?.name || 'Academic Faculty'}
+                                </h4>
                                 <p className="mt-1 text-xs font-bold text-secondary-500 line-clamp-2">
-                                    {message.sender?.name || 'Academic Faculty'}: {message.content}
+                                    {message.content}
                                 </p>
                             </div>
                         </div>
 
                         {message.messageType === 'call' ? (
-                            <div className="flex border-t border-secondary-100 bg-secondary-50/30 p-2">
+                            <div className="flex border-t border-secondary-100 bg-secondary-50/50 p-4 gap-3 relative z-10">
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         window.open(message.fileUrl, '_blank');
                                         toast.dismiss(t.id);
                                     }}
-                                    className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20"
+                                    className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-white bg-primary-600 rounded-2xl hover:bg-primary-700 transition-all shadow-xl shadow-primary-500/30 flex items-center justify-center gap-2"
                                 >
-                                    Join Session
+                                    <Phone size={14} fill="white" />
+                                    Accept Call
                                 </button>
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         toast.dismiss(t.id);
                                     }}
-                                    className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-secondary-500 hover:text-secondary-700"
+                                    className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-secondary-500 bg-white border border-secondary-200 rounded-2xl hover:bg-secondary-50 transition-all font-bold"
                                 >
-                                    Ignore
+                                    Decline
                                 </button>
                             </div>
                         ) : (
-                            <div className="flex border-t border-secondary-100 divide-x divide-secondary-100">
+                            <div className="flex border-t border-secondary-100 divide-x divide-secondary-100 relative z-10">
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         navigate(`/chat/${message.sender._id || message.sender}`);
                                         toast.dismiss(t.id);
                                     }}
-                                    className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-primary-600 hover:bg-secondary-50 transition-all"
+                                    className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-primary-600 hover:bg-secondary-50 transition-all"
                                 >
-                                    Open Chat
+                                    Respond Now
                                 </button>
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         toast.dismiss(t.id);
                                     }}
-                                    className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-secondary-400 hover:text-secondary-600"
+                                    className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-secondary-400 hover:text-secondary-600 hover:bg-secondary-50 transition-all"
                                 >
-                                    Dismiss
+                                    Ignore
                                 </button>
                             </div>
                         )}
                     </div>
-                ), { duration: message.messageType === 'call' ? 15000 : 5000 });
+                ), { duration: message.messageType === 'call' ? 45000 : 5000 });
 
                 if (message.messageType !== 'call') {
                     // Fetch unread counts to update badges globally
+                    const currentCount = unreadCountsRef.current[message.sender._id || message.sender]?.count || 0;
                     dispatch(setUnreadCount({
                         senderId: message.sender._id || message.sender,
-                        count: (unreadCounts[message.sender._id || message.sender]?.count || 0) + 1,
+                        count: currentCount + 1,
                         lastMessageTime: message.createdAt
                     }));
                 }
@@ -203,7 +220,7 @@ const SocketListener = () => {
         });
 
         return () => socket.close();
-    }, [user, dispatch, navigate, unreadCounts]);
+    }, [user?._id, dispatch, navigate, notificationSound]); // Removed unstable dependencies like unreadCounts
 
     // Initial fetch for unread counts and contacts when user logs in
     useEffect(() => {

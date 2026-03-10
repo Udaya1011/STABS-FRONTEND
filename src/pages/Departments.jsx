@@ -109,22 +109,22 @@ const Departments = () => {
     };
 
     return (
-        <div className="space-y-8 pb-10">
-            <div className="bg-white rounded-3xl shadow-premium border border-secondary-100 overflow-hidden">
-                <div className="overflow-x-auto" style={{ height: '600px', overflowY: 'auto' }}>
+        <div className="flex-1 flex flex-col min-h-0 -mt-2">
+            <div className="flex-1 flex flex-col bg-white rounded-3xl shadow-xl shadow-primary-500/10 border border-primary-100 overflow-hidden">
+                <div className="flex-1 overflow-auto custom-scrollbar min-h-0">
                     <table className="w-full text-left border-collapse min-w-[1000px]">
-                        <thead className="bg-primary-50/50 sticky top-0 z-10 backdrop-blur-md border-b border-primary-100">
+                        <thead className="bg-primary-600 sticky top-0 z-10 border-b border-primary-700 shadow-sm">
                             <tr>
-                                <th className="py-4 px-6 text-xs font-bold text-primary-700 uppercase tracking-widest w-20 text-center">#</th>
-                                <th className="py-4 px-8 text-xs font-bold text-primary-700 uppercase tracking-widest text-center">Department</th>
-                                <th className="py-4 px-6 text-xs font-bold text-primary-700 uppercase tracking-widest text-center w-28">Programme</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest text-center w-24">Block</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest text-center w-24">Class</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest text-center w-24">Room No</th>
-                                <th className="py-4 px-4 text-xs font-bold text-primary-700 uppercase tracking-widest text-center w-28">Actions</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest w-20 text-center">#</th>
+                                <th className="py-4 px-8 text-xs font-bold text-white uppercase tracking-widest text-center">Department</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-28">Programme</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-24">Block</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-24">Class</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-24">Room No</th>
+                                <th className="py-4 px-4 text-xs font-bold text-white uppercase tracking-widest text-center w-28">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-primary-50">
+                        <tbody className="divide-y divide-primary-300">
                             {isLoading && departments.length === 0 ? (
                                 <tr>
                                     <td colSpan="7" className="py-20 text-center">

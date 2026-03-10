@@ -73,15 +73,15 @@ const Chat = () => {
 
     const handleCall = (type = 'voice') => {
         if (!userId) return;
-        const callLink = `https://meet.jit.si/Academic-Consultation-${Math.random().toString(36).substring(7)}`;
-        const messagePayload = {
-            receiver: userId,
-            content: `Incoming ${type === 'voice' ? 'Audio' : 'Video'} Call Request`,
-            messageType: 'call',
-            fileUrl: callLink
-        };
-        dispatch(sendMessage(messagePayload));
-        toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} call invitation sent`);
+        
+        if (window.initiateCall) {
+            window.initiateCall({ 
+                id: userId, 
+                name: currentChatUser?.name || 'Contact' 
+            }, type);
+        } else {
+            toast.error('The WebRTC engine is not initialized yet.');
+        }
     };
 
     const handleFileUpload = async (e) => {
@@ -399,17 +399,10 @@ const Chat = () => {
                                 <div className="flex justify-between items-center mb-0.5">
                                     <h4 className={`font-bold text-sm truncate uppercase tracking-tight ${userId === contact.id ? 'text-primary-600' : 'text-secondary-900'}`}>{contact.name}</h4>
                                     {unreadCounts[contact.id]?.count > 0 && (
-                                        <div className="relative flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                                            <div
-                                                style={{ backgroundColor: '#892020ff' }}
-                                                className="absolute inset-0 rounded-full blur-[6px] opacity-40 animate-pulse"
-                                            ></div>
-                                            <div
-                                                style={{ background: 'linear-gradient(135deg, #ff4141 0%, #900c0c 100%)' }}
-                                                className="w-6 h-6 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-xl border-[1.5px] border-white relative z-10 leading-none"
-                                            >
-                                                {unreadCounts[contact.id].count}
-                                            </div>
+                                        <div
+                                            className="w-6 h-6 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-md border-[1.5px] border-white relative z-10 leading-none bg-primary-600"
+                                        >
+                                            {unreadCounts[contact.id].count}
                                         </div>
                                     )}
                                 </div>
@@ -472,7 +465,7 @@ const Chat = () => {
                                     key={key}
                                     className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                                 >
-                                    <div className={`max-w-[80%] ${isMe ? 'bg-primary-600 text-white rounded-2xl rounded-tr-none shadow-lg shadow-primary-500/20' : 'bg-white text-secondary-800 rounded-2xl rounded-tl-none border border-secondary-100 shadow-sm'} p-4 relative group transition-colors`}>
+                                    <div className={`max-w-[80%] ${isMe ? 'bg-primary-600 text-white rounded-2xl rounded-tr-none shadow-md' : 'bg-white text-secondary-800 rounded-2xl rounded-tl-none border border-secondary-100 shadow-sm'} p-4 relative group transition-colors`}>
                                         {msg.messageType === 'image' && (
                                             <div className="mb-2 rounded-lg overflow-hidden border border-secondary-100">
                                                 <img src={msg.fileUrl} alt="chat" className="max-w-full h-auto max-h-64 object-cover" />
@@ -494,7 +487,7 @@ const Chat = () => {
                                         )}
                                         {msg.messageType === 'audio' && (
                                             <div className={`flex items-center gap-4 p-4 rounded-2xl mb-2 ${isMe ? 'bg-white/15' : 'bg-primary-50'} min-w-[240px] shadow-inner`}>
-                                                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${isMe ? 'bg-white/20' : 'bg-primary-600 text-white shadow-lg shadow-primary-500/20'}`}>
+                                                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${isMe ? 'bg-white/20' : 'bg-primary-600 text-white shadow-md'}`}>
                                                     <Volume2 size={24} className={isMe ? 'text-white' : 'text-white'} />
                                                 </div>
                                                 <div className="flex-1 space-y-2">
@@ -513,22 +506,24 @@ const Chat = () => {
                                         {msg.messageType === 'call' && (
                                             <div className={`flex flex-col gap-4 p-5 rounded-2xl mb-2 ${isMe ? 'bg-white/10 border border-white/20' : 'bg-primary-50 border border-primary-100'}`}>
                                                 <div className="flex items-center gap-4">
-                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center animate-pulse ${isMe ? 'bg-white/20' : 'bg-primary-600 text-white'}`}>
-                                                        <Video size={24} />
+                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${msg.fileUrl ? 'animate-pulse' : ''} ${isMe ? 'bg-white/20' : 'bg-primary-600 text-white'}`}>
+                                                        {msg.fileUrl ? <Video size={24} /> : <Phone size={24} />}
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-black uppercase tracking-tight">{msg.content}</p>
-                                                        <p className={`text-[10px] font-bold uppercase opacity-60`}>Encrypted Virtual Session</p>
+                                                        <p className={`text-[10px] font-bold uppercase opacity-60`}>{msg.fileUrl ? 'Encrypted Virtual Session' : 'Call History Log'}</p>
                                                     </div>
                                                 </div>
-                                                <a
-                                                    href={msg.fileUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all ${isMe ? 'bg-white text-primary-600 hover:bg-primary-50 shadow-lg' : 'bg-primary-600 text-white hover:bg-primary-700 shadow-xl shadow-primary-500/20'}`}
-                                                >
-                                                    Join Virtual Room
-                                                </a>
+                                                {msg.fileUrl && (
+                                                    <a
+                                                        href={msg.fileUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all ${isMe ? 'bg-white text-primary-600 hover:bg-primary-50 shadow-md' : 'bg-primary-600 text-white hover:bg-primary-700 shadow-lg'}`}
+                                                    >
+                                                        Join Virtual Room
+                                                    </a>
+                                                )}
                                             </div>
                                         )}
                                         <p className="text-sm font-medium leading-relaxed">{msg.content}</p>
@@ -674,7 +669,7 @@ const Chat = () => {
                             <button
                                 type="submit"
                                 disabled={(!content.trim() && !uploading) || uploading}
-                                className="p-3 bg-primary-600 text-white rounded-xl shadow-lg shadow-primary-600/30 hover:bg-primary-700 hover:-translate-y-0.5 transition-all active:translate-y-0 disabled:opacity-50 disabled:shadow-none"
+                                className="p-3 bg-primary-600 text-white rounded-xl shadow-md hover:bg-primary-700 hover:-translate-y-0.5 transition-all active:translate-y-0 disabled:opacity-50 disabled:shadow-none"
                             >
                                 <Send size={20} />
                             </button>
@@ -682,17 +677,14 @@ const Chat = () => {
                     </div>
                 </div>
             ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-secondary-50/20 backdrop-blur-sm relative overflow-hidden transition-colors">
-                    <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-600 rounded-full blur-[100px]"></div>
-                    </div>
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-white relative overflow-hidden transition-colors">
                     <div className="relative z-10">
                         <div className="w-24 h-24 bg-white border border-secondary-100 rounded-3xl flex items-center justify-center text-primary-500 mb-8 shadow-premium mx-auto transition-colors">
                             <MessageSquare size={44} />
                         </div>
                         <h2 className="text-3xl font-bold text-secondary-900 uppercase tracking-tight transition-colors">Academic Connectivity</h2>
                         <p className="text-secondary-500 max-w-sm mt-3 mx-auto font-medium leading-relaxed transition-colors">Select a contact from the directory to initiate a secure, high-priority communication channel.</p>
-                        <button onClick={() => navigate(user?.role === 'student' ? '/teachers' : '/students')} className="mt-10 btn-primary px-10 py-4 shadow-xl shadow-primary-600/20 uppercase tracking-widest text-xs font-black transition-all">
+                        <button onClick={() => navigate(user?.role === 'student' ? '/teachers' : '/students')} className="mt-10 btn-primary px-10 py-4 shadow-lg uppercase tracking-widest text-xs font-black transition-all">
                             Open {user?.role === 'student' ? 'Staff' : 'Student'} Directory
                         </button>
                     </div>

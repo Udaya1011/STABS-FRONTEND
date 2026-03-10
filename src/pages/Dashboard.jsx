@@ -155,7 +155,7 @@ const Dashboard = () => {
                         </button>
                         <button 
                             onClick={handleOpenTimetableModal}
-                            className="btn-primary flex items-center gap-2 shadow-xl shadow-primary-500/20"
+                            className="btn-primary flex items-center gap-2 shadow-lg"
                         >
                             <Calendar size={18} /> Manage My Timetable
                         </button>
@@ -217,7 +217,7 @@ const Dashboard = () => {
                                     {user.role === 'teacher' && app.status === 'pending' ? (
                                         <button
                                             onClick={() => handleUpdateStatus(app._id, 'approved')}
-                                            className="px-4 py-1.5 bg-primary-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20"
+                                            className="px-4 py-1.5 bg-primary-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-primary-700 transition-all shadow-md"
                                         >
                                             Confirm
                                         </button>
@@ -244,21 +244,20 @@ const Dashboard = () => {
                 {/* Right Column: Mini Info Cards */}
                 <div className="space-y-8">
                     <div className="bg-gradient-to-br from-secondary-900 to-black rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl border border-secondary-800">
-                        <div className="absolute top-0 right-0 w-48 h-48 bg-primary-600/20 rounded-full -mr-24 -mt-24 blur-3xl animate-pulse"></div>
                         <div className="relative z-10">
                             <h4 className="text-xl font-bold mb-2 uppercase tracking-tight">AI Neural Engine</h4>
                             <p className="text-xs text-secondary-400 font-black uppercase tracking-widest mb-8">Scheduling Optimizer v2.4</p>
                             <div className="space-y-4 mb-10">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full shadow-sm"></div>
                                     <span className="text-[10px] font-bold text-secondary-300 uppercase">Synchronized with Node 16</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full shadow-sm"></div>
                                     <span className="text-[10px] font-bold text-secondary-300 uppercase">Latency: 24ms</span>
                                 </div>
                             </div>
-                            <button className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-primary-900/40">Open Control Panel</button>
+                            <button className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg">Open Control Panel</button>
                         </div>
                     </div>
 
@@ -354,7 +353,7 @@ const Dashboard = () => {
                                 </div>
                                 <div className="p-4 border-t border-secondary-100 bg-white flex justify-end gap-3 shrink-0">
                                     <button type="button" onClick={() => setShowTimetableModal(false)} className="btn-secondary px-6 font-black uppercase tracking-widest text-[10px]">Discard</button>
-                                    <button type="submit" className="btn-primary flex items-center gap-2 px-8 shadow-lg shadow-primary-500/20 font-black uppercase tracking-widest text-[10px]">
+                                    <button type="submit" className="btn-primary flex items-center gap-2 px-8 shadow-md font-black uppercase tracking-widest text-[10px]">
                                         <Save size={16} />
                                         Save My Timetable
                                     </button>

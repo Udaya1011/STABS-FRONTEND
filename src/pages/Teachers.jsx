@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Search, Mail, MapPin, Calendar, Star, ChevronRight, GraduationCap, Plus, Users, X, Save, Edit2, Trash2, Key, Eye, Info, UserCheck, Layout } from 'lucide-react';
+import { Search, Mail, MapPin, Calendar, Star, ChevronLeft, ChevronRight, GraduationCap, Plus, Users, X, Save, Edit2, Trash2, Key, Eye, Info, UserCheck, Layout } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getTeachers, updateTeacher, deleteTeacher, registerTeacher } from '../store/slices/teacherSlice';
 import { getDepartments } from '../store/slices/departmentSlice';
@@ -11,6 +11,8 @@ import axios from 'axios';
 const Teachers = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedDepId, setSelectedDepId] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(8);
     const [showModal, setShowModal] = useState(false);
     const [showSidePanel, setShowSidePanel] = useState(false);
     const [selectedTeacher, setSelectedTeacher] = useState(null);
@@ -65,12 +67,19 @@ const Teachers = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dispatch]);
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedDepId]);
+
     const filteredTeachers = teachers.filter(t => {
         const matchesSearch = t.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             t.designation?.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesFilter = selectedDepId === 'all' || (t.user?.department?._id || t.user?.department) === selectedDepId;
         return matchesSearch && matchesFilter;
     });
+
+    const totalPages = Math.ceil(filteredTeachers.length / itemsPerPage);
+    const currentTeachers = filteredTeachers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     const handleOpenModal = (t = null) => {
         if (t) {
@@ -180,23 +189,32 @@ const Teachers = () => {
     };
 
     return (
-        <div className="space-y-8 pb-10">
-
-            <div className="bg-white rounded-3xl shadow-premium border border-secondary-100 overflow-hidden">
-                <div className="overflow-x-auto" style={{ height: '600px', overflowY: 'auto' }}>
+        <div className="flex-1 flex flex-col min-h-0 -mt-2">
+            <div className="flex-1 flex flex-col bg-white rounded-3xl shadow-xl shadow-primary-500/10 border border-primary-100 overflow-hidden">
+                <div className="flex-1 overflow-auto custom-scrollbar min-h-0">
                     <table className="w-full text-left border-collapse min-w-[1000px]">
-                        <thead className="bg-secondary-50/50 sticky top-0 z-10 backdrop-blur-md border-b border-secondary-100">
+                        <thead className="bg-primary-600 sticky top-0 z-10 border-b border-primary-700 shadow-sm">
                             <tr>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest">Faculty</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest">Designation</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest">Email</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest text-center">Programme</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest text-center">Mobile Number</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest text-right">Actions</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-20">#</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest">Faculty</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest">Designation</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest">Email</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center">Programme</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center">Mobile Number</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-secondary-50">
+                        <tbody className="divide-y divide-primary-300">
                             {isLoading && teachers.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="py-20 text-center">
+                                        <div className="flex flex-col items-center justify-center">
+                                            <div className="w-12 h-12 border-4 border-primary-100 border-t-primary-600 rounded-full animate-spin mb-4"></div>
+                                            <p className="text-sm font-bold text-secondary-500 uppercase tracking-widest">Syncing Faculty Nodes...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : filteredTeachers.length === 0 ? (
                                 <tr>
                                     <td colSpan="6" className="py-20 text-center">
                                         <div className="flex flex-col items-center">
@@ -216,8 +234,13 @@ const Teachers = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredTeachers.map((teacher) => (
+                                currentTeachers.map((teacher, index) => (
                                     <tr key={teacher._id} className="hover:bg-secondary-50/50 transition-all group">
+                                        <td className="py-4 px-6 text-center">
+                                            <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">
+                                                {String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')}
+                                            </span>
+                                        </td>
                                         <td className="py-4 px-8">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-full bg-secondary-50 flex items-center justify-center text-sm font-bold text-secondary-400 group-hover:bg-primary-600 group-hover:text-white transition-all shadow-sm shrink-0 overflow-hidden uppercase border border-secondary-100">
@@ -228,7 +251,7 @@ const Teachers = () => {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-bold text-secondary-900 transition-colors group-hover:text-primary-600 font-display">{teacher.user?.name}</p>
+                                                    <p className="text-sm font-bold text-primary-600 transition-colors font-display">{teacher.user?.name}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -236,7 +259,7 @@ const Teachers = () => {
                                             <span className="text-[10px] font-black text-secondary-600 tracking-wider uppercase bg-secondary-50 px-2 py-0.5 rounded border border-secondary-100">{teacher.designation || 'FACULTY'}</span>
                                         </td>
                                         <td className="py-4 px-6">
-                                            <span className="text-xs font-medium text-secondary-600 truncate max-w-[150px] inline-block">{teacher.user?.email}</span>
+                                            <span className="text-xs font-medium text-primary-600 truncate max-w-[150px] inline-block">{teacher.user?.email}</span>
                                         </td>
                                         <td className="py-4 px-6 text-center">
                                             <span className="text-xs font-bold text-secondary-700">{teacher.user?.department?.programme || teacher.user?.department?.name || 'General Portfolio'}</span>
@@ -275,6 +298,27 @@ const Teachers = () => {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Pagination Footer */}
+                <div className="px-8 py-4 border-t border-secondary-100 flex items-center justify-start gap-4 bg-white sticky bottom-0">
+                    <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        className="text-secondary-300 hover:text-secondary-900 disabled:opacity-30 transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+                    <span className="text-xs font-black text-secondary-900 uppercase tracking-widest leading-none">
+                        Page {currentPage} of {totalPages || 1}
+                    </span>
+                    <button
+                        disabled={currentPage === totalPages || totalPages === 0}
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        className="text-secondary-300 hover:text-secondary-900 disabled:opacity-30 transition-colors"
+                    >
+                        <ChevronRight size={20} />
+                    </button>
                 </div>
             </div>
 

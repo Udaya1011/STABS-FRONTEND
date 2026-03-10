@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getStudents, updateStudent, deleteStudent, registerStudent } from '../store/slices/studentSlice';
 import { getDepartments } from '../store/slices/departmentSlice';
-import { Search, Mail, Calendar, GraduationCap, Plus, Users, X, Save, Edit2, Trash2, Key, Hash, Layers, Eye, Info, UserCheck } from 'lucide-react';
+import { Search, Mail, Calendar, GraduationCap, Plus, Users, X, Save, Edit2, Trash2, Key, Hash, Layers, Eye, Info, UserCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 
 const Students = () => {
     const [searchQuery, setSearchQuery] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(8);
     const [showModal, setShowModal] = useState(false);
     const [showSidePanel, setShowSidePanel] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
@@ -52,6 +54,10 @@ const Students = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dispatch]);
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedDepartment, selectedSemester, selectedYear]);
+
     const filteredStudents = students.filter(s => {
         const matchesSearch = (s.user?.name || 'Legacy Student').toLowerCase().includes(searchQuery.toLowerCase()) ||
             s.registerNumber?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -62,6 +68,9 @@ const Students = () => {
 
         return matchesSearch && matchesDep && matchesSem && matchesYear;
     });
+
+    const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+    const currentStudents = filteredStudents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     const handleOpenModal = (s = null) => {
         if (s) {
@@ -119,23 +128,24 @@ const Students = () => {
     };
 
     return (
-        <div className="space-y-8 pb-10">
+        <div className="flex-1 flex flex-col min-h-0 -mt-2">
 
 
-            <div className="bg-white rounded-3xl shadow-premium border border-secondary-100 overflow-hidden">
-                <div className="overflow-x-auto" style={{ height: '600px', overflowY: 'auto' }}>
+            <div className="flex-1 flex flex-col bg-white rounded-3xl shadow-xl shadow-primary-500/10 border border-primary-100 overflow-hidden">
+                <div className="flex-1 overflow-auto custom-scrollbar min-h-0">
                     <table className="w-full text-left border-collapse min-w-[1000px]">
-                        <thead className="bg-secondary-50/50 sticky top-0 z-10 backdrop-blur-md border-b border-secondary-100">
+                        <thead className="bg-primary-600 sticky top-0 z-10 border-b border-primary-700 shadow-sm">
                             <tr>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest">Student</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest">Reg Number</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest">Email</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest text-center">Division</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest text-center">Batch Plan</th>
-                                <th className="py-4 px-6 text-xs font-bold text-secondary-500 uppercase tracking-widest text-right">Actions</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-20">#</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest">Student</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest">Reg Number</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest">Email</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center">Division</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center">Batch Plan</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-secondary-50">
+                        <tbody className="divide-y divide-primary-300">
                             {isLoading && students.length === 0 ? (
                                 <tr>
                                     <td colSpan="6" className="py-20 text-center">
@@ -156,8 +166,13 @@ const Students = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredStudents.map((s) => (
+                                currentStudents.map((s, index) => (
                                     <tr key={s._id} className="hover:bg-secondary-50/50 transition-all group">
+                                        <td className="py-4 px-6 text-center">
+                                            <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">
+                                                {String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')}
+                                            </span>
+                                        </td>
                                         <td className="py-4 px-8">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-full bg-secondary-50 flex items-center justify-center text-sm font-bold text-secondary-400 group-hover:bg-primary-600 group-hover:text-white transition-all shadow-sm shrink-0 overflow-hidden uppercase border border-secondary-100">
@@ -168,7 +183,7 @@ const Students = () => {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-bold text-secondary-900 transition-colors group-hover:text-primary-600">{s.user?.name || 'Academic Record'}</p>
+                                                    <p className="text-sm font-bold text-primary-600 transition-colors">{s.user?.name || 'Academic Record'}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -176,7 +191,7 @@ const Students = () => {
                                             <span className="text-[11px] font-black text-secondary-700 tracking-wider font-mono bg-secondary-50 px-2 py-1 rounded border border-secondary-100 uppercase">{s.registerNumber}</span>
                                         </td>
                                         <td className="py-4 px-6">
-                                            <span className="text-xs font-medium text-secondary-600 truncate max-w-[150px] inline-block">{s.user?.email || 'N/A'}</span>
+                                            <span className="text-xs font-medium text-primary-600 truncate max-w-[150px] inline-block">{s.user?.email || 'N/A'}</span>
                                         </td>
                                         <td className="py-4 px-6 text-center">
                                             <span className="text-xs font-bold text-secondary-700">{s.user?.department?.name || 'General Batch'}</span>
@@ -217,6 +232,27 @@ const Students = () => {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Pagination Footer */}
+                <div className="px-8 py-4 border-t border-secondary-100 flex items-center justify-start gap-4 bg-white sticky bottom-0">
+                    <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        className="text-secondary-300 hover:text-secondary-900 disabled:opacity-30 transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+                    <span className="text-xs font-black text-secondary-900 uppercase tracking-widest leading-none">
+                        Page {currentPage} of {totalPages || 1}
+                    </span>
+                    <button
+                        disabled={currentPage === totalPages || totalPages === 0}
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        className="text-secondary-300 hover:text-secondary-900 disabled:opacity-30 transition-colors"
+                    >
+                        <ChevronRight size={20} />
+                    </button>
                 </div>
             </div>
 
