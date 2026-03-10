@@ -100,7 +100,9 @@ const WebRTCCall = () => {
 
     useEffect(() => {
         if (!user) return;
-        const s = io('/');
+        const isProd = import.meta.env.PROD;
+        const backendUrl = import.meta.env.VITE_API_URL || (isProd ? 'https://rvscas-backend.onrender.com' : '');
+        const s = io(backendUrl);
         setSocket(s);
         socketRef.current = s;
 

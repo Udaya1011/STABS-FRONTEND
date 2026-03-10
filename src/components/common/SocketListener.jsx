@@ -45,7 +45,9 @@ const SocketListener = () => {
     useEffect(() => {
         if (!user?._id) return;
 
-        const socket = io('/');
+        const isProd = import.meta.env.PROD;
+        const backendUrl = import.meta.env.VITE_API_URL || (isProd ? 'https://rvscas-backend.onrender.com' : '');
+        const socket = io(backendUrl);
 
         socket.on('connect', () => {
             socket.emit('join', user._id);
