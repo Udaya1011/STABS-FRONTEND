@@ -19,6 +19,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../store/slices/authSlice';
+import getImageUrl from '../../utils/imageUtils';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     const { user } = useSelector((state) => state.auth);
@@ -126,23 +127,13 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                     ))}
                 </nav>
 
-                {/* QUICK ACTION BUTTON */}
-                <div className="px-4 mb-2">
-                    <button
-                        onClick={() => navigate('/attendance')}
-                        className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-primary-50 text-primary-600 hover:bg-primary-600 hover:text-white transition-all font-black text-[10px] uppercase tracking-[0.2em] group shadow-sm border border-primary-100 hover:border-primary-700 hover:shadow-lg hover:shadow-primary-600/20`}
-                    >
-                        <ClipboardList size={22} className="group-hover:scale-110 transition-transform" />
-                        {!isCollapsed && <span>Open Attendance</span>}
-                    </button>
-                </div>
 
                 <div className="p-4 border-t border-secondary-100 bg-white">
                     {!isCollapsed && (
                         <div className="mb-4 px-3 py-3 bg-secondary-50/50 rounded-2xl flex items-center gap-3 border border-secondary-100 hover:border-primary-200 hover:bg-white transition-all cursor-pointer shadow-sm">
                             <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center text-white font-bold text-lg border border-primary-700 overflow-hidden shadow-sm">
                                 {user?.avatar && !user.avatar.includes('default.png') ? (
-                                    <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                    <img src={getImageUrl(user.avatar)} alt={user.name} className="w-full h-full object-cover" />
                                 ) : (
                                     user?.name?.charAt(0)
                                 )}
