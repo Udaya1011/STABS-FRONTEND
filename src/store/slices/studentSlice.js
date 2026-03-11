@@ -19,9 +19,10 @@ const getAuthHeader = (thunkAPI) => {
     return {};
 };
 
-export const getStudents = createAsyncThunk('students/getAll', async (_, thunkAPI) => {
+export const getStudents = createAsyncThunk('students/getAll', async (query = '', thunkAPI) => {
     try {
-        return (await axios.get(API_URL, getAuthHeader(thunkAPI))).data;
+        const url = query ? `${API_URL}?${query}` : API_URL;
+        return (await axios.get(url, getAuthHeader(thunkAPI))).data;
     } catch (error) {
         return thunkAPI.rejectWithValue(error.response?.data?.message || 'Failed to fetch students');
     }
