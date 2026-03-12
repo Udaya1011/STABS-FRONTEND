@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, PhoneOff, Mic, MicOff, Volume2, User, Loader2, Video, VideoOff } from 'lucide-react';
+import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX, User, Loader2, Video, VideoOff } from 'lucide-react';
 import io from 'socket.io-client';
 import { toast } from 'react-hot-toast';
 import { sendMessage } from '../../store/slices/messageSlice';
@@ -17,6 +17,7 @@ const WebRTCCall = () => {
     const [partner, setPartner] = useState(null);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
+    const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
     const [callType, setCallType] = useState('voice'); // 'voice' or 'video'
     const [duration, setDuration] = useState(0);
     
@@ -27,69 +28,26 @@ const WebRTCCall = () => {
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
     const receiverRingtone = useRef(new Audio('/custom-ringtone.mpeg'));
-    const callerRingtone = useRef(new Audio('/MESSAGE-RINGTONE.mp3'));
+    const callerRingtone = useRef(new Audio('/custom-ringtone.mpeg'));
     const timerRef = useRef(null);
+    const ringTimeoutRef = useRef(null);
+    const callStateRef = useRef('idle'); // mirrors callState for use inside socket closures
+
+    useEffect(() => {
+        callStateRef.current = callState;
+    }, [callState]);
 
     useEffect(() => {
         callerRingtone.current.loop = true;
+        receiverRingtone.current.loop = true;
     }, []);
 
-    useEffect(() => {
-        const currentReceiverRingtone = receiverRingtone.current;
-        const handleEnded = () => {
-            if (partner && socketRef.current) {
-                socketRef.current.emit('rtc-end', { to: partner.id });
-            }
-            endCallLocally();
-        };
-        currentReceiverRingtone.addEventListener('ended', handleEnded);
-        
-        return () => {
-            currentReceiverRingtone.removeEventListener('ended', handleEnded);
-        };
-    }, [partner]);
-
-    useEffect(() => {
-        let isCancelled = false;
-
-        const stopAudio = () => {
-            if (receiverRingtone.current) {
-                receiverRingtone.current.pause();
-                receiverRingtone.current.currentTime = 0;
-            }
-            if (callerRingtone.current) {
-                callerRingtone.current.pause();
-                callerRingtone.current.currentTime = 0;
-            }
-        };
-
-        const playAudio = async (audio) => {
-            try {
-                audio.currentTime = 0;
-                await audio.play();
-                if (isCancelled || (callState !== 'ringing' && callState !== 'calling')) {
-                    audio.pause();
-                    audio.currentTime = 0;
-                }
-            } catch (e) {
-                console.log('Audio play failed:', e);
-            }
-        };
-
-        if (callState === 'ringing') {
-            playAudio(receiverRingtone.current);
-        } else if (callState === 'calling') {
-            playAudio(callerRingtone.current);
-        } else {
-            stopAudio();
-            isCancelled = true;
-        }
-
-        return () => {
-            isCancelled = true;
-            stopAudio();
-        };
-    }, [callState]);
+    const stopAllRingtones = () => {
+        receiverRingtone.current.pause();
+        receiverRingtone.current.currentTime = 0;
+        callerRingtone.current.pause();
+        callerRingtone.current.currentTime = 0;
+    };
 
     const configuration = {
         iceServers: [
@@ -112,17 +70,40 @@ const WebRTCCall = () => {
         s.emit('join', user._id);
 
         s.on('rtc-offer', async ({ from, offer, senderName, callType: incomingType }) => {
+            // GUARD: ignore if we're already in a call
+            if (callStateRef.current !== 'idle') {
+                s.emit('rtc-end', { to: from });
+                return;
+            }
+
             setPartner({ id: from, name: senderName });
             setCallType(incomingType || 'voice');
             setCallState('ringing');
             setIsCaller(false);
+
+            stopAllRingtones();
+            receiverRingtone.current.play().catch(e => console.log('Ringtone failed:', e));
+
+            // Auto-end after 60 seconds if not answered
+            ringTimeoutRef.current = setTimeout(() => {
+                if (socketRef.current) {
+                    socketRef.current.emit('rtc-end', { to: from });
+                }
+                endCallLocally();
+            }, 60000);
+
             peerConnection.current = createPeerConnection(from, incomingType || 'voice');
             await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
         });
 
         s.on('rtc-answer', async ({ answer }) => {
+            // GUARD: only the caller (in 'calling' state) should process the answer
+            if (callStateRef.current !== 'calling') return;
+
             if (peerConnection.current) {
                 await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+                stopAllRingtones();
+                clearTimeout(ringTimeoutRef.current);
                 setCallState('connected');
                 startTimer();
             }
@@ -192,6 +173,17 @@ const WebRTCCall = () => {
             setCallState('calling');
             setIsCaller(true);
             
+            stopAllRingtones();
+            callerRingtone.current.play().catch(e => console.log('Caller ringtone failed:', e));
+
+            // Auto-end after 60 seconds if not answered
+            ringTimeoutRef.current = setTimeout(() => {
+                if (socketRef.current) {
+                    socketRef.current.emit('rtc-end', { to: targetUser.id });
+                }
+                endCallLocally();
+            }, 60000);
+            
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
             localStream.current = stream;
             
@@ -250,8 +242,8 @@ const WebRTCCall = () => {
                     answer 
                 });
             }
-            if (receiverRingtone.current) receiverRingtone.current.pause();
-            if (callerRingtone.current) callerRingtone.current.pause();
+            stopAllRingtones();
+            clearTimeout(ringTimeoutRef.current);
             setCallState('connected');
             startTimer();
         } catch (err) {
@@ -299,16 +291,17 @@ const WebRTCCall = () => {
         if (localVideoRef.current) localVideoRef.current.srcObject = null;
         remoteStreamRef.current = null;
         
-        if (receiverRingtone.current) receiverRingtone.current.pause();
-        if (callerRingtone.current) callerRingtone.current.pause();
+        stopAllRingtones();
 
         clearInterval(timerRef.current);
+        clearTimeout(ringTimeoutRef.current);
         setCallState('idle');
         setPartner(null);
         setDuration(0);
         setIsCaller(false);
         setIsMuted(false);
         setIsVideoOff(false);
+        setIsSpeakerMuted(false);
     };
 
     const toggleMute = () => {
@@ -328,6 +321,14 @@ const WebRTCCall = () => {
                 videoTrack.enabled = isVideoOff;
                 setIsVideoOff(!isVideoOff);
             }
+        }
+    };
+
+    const toggleSpeaker = () => {
+        const audio = remoteAudio.current;
+        if (audio) {
+            audio.muted = !isSpeakerMuted;
+            setIsSpeakerMuted(!isSpeakerMuted);
         }
     };
 
@@ -414,7 +415,7 @@ const WebRTCCall = () => {
                         {partner?.name || 'Academic Contact'}
                     </h2>
                     <div className="flex flex-col items-center gap-2">
-                        <span className={`text-[10px] font-black uppercase tracking-[0.3em] px-5 py-2 rounded-full border ${callState === 'connected' ? 'bg-success-50 text-success-600 border-success-100' : callType === 'video' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-primary-50 text-primary-600 border-primary-100'}`}>
+                        <span className={`text-[10px] font-black uppercase tracking-[0.3em] px-5 py-2 rounded-full border ${callState === 'connected' ? 'bg-green-50 text-green-600 border-green-100' : callType === 'video' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-primary-50 text-primary-600 border-primary-100'}`}>
                             {callState === 'ringing' ? `Incoming ${callType}` : 
                              callState === 'calling' ? 'Requesting Connection' : 
                              callState === 'connected' ? `Live Channel • ${formatTime(duration)}` : 'Connecting...'}
@@ -435,6 +436,11 @@ const WebRTCCall = () => {
                                 <button onClick={toggleMute} className="flex flex-col items-center gap-2 group">
                                     <div className={`w-14 h-14 ${isMuted ? 'bg-amber-100 text-amber-600' : 'bg-secondary-50 text-secondary-400'} rounded-2xl flex items-center justify-center transition-all shadow-sm`}>
                                         {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                                    </div>
+                                </button>
+                                <button onClick={toggleSpeaker} className="flex flex-col items-center gap-2 group">
+                                    <div className={`w-14 h-14 ${isSpeakerMuted ? 'bg-amber-100 text-amber-600' : 'bg-secondary-50 text-secondary-400'} rounded-2xl flex items-center justify-center transition-all shadow-sm`}>
+                                        {isSpeakerMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
                                     </div>
                                 </button>
                                 {callType === 'video' && (
@@ -458,7 +464,7 @@ const WebRTCCall = () => {
                                     </div>
                                 </button>
                                 <button onClick={answerCall} className="flex flex-col items-center gap-2 group">
-                                    <div className="w-14 h-14 bg-success-500 text-white rounded-2xl flex items-center justify-center transition-all shadow-md animate-bounce">
+                                    <div className="w-14 h-14 bg-green-500 text-white rounded-2xl flex items-center justify-center transition-all shadow-md animate-bounce hover:bg-green-600">
                                         {callType === 'video' ? <Video size={24} /> : <Phone size={24} />}
                                     </div>
                                 </button>
@@ -469,6 +475,11 @@ const WebRTCCall = () => {
                             <button onClick={toggleMute} className="flex flex-col items-center gap-2 group">
                                 <div className={`w-14 h-14 ${isMuted ? 'bg-amber-100 text-amber-600' : 'bg-secondary-50 text-secondary-400'} rounded-2xl flex items-center justify-center transition-all shadow-sm hover:brightness-95`}>
                                     {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                                </div>
+                            </button>
+                            <button onClick={toggleSpeaker} className="flex flex-col items-center gap-2 group">
+                                <div className={`w-14 h-14 ${isSpeakerMuted ? 'bg-amber-100 text-amber-600' : 'bg-secondary-50 text-secondary-400'} rounded-2xl flex items-center justify-center transition-all shadow-sm hover:brightness-95`}>
+                                    {isSpeakerMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
                                 </div>
                             </button>
                             {callType === 'video' && (
