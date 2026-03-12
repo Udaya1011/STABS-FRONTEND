@@ -101,16 +101,23 @@ const Chat = () => {
                 }
             };
 
-            const response = await axios.post('/api/upload', formData, config);
-            const { url, mimetype } = response.data;
-
+            const { url, mimetype, originalName } = response.data;
+            
             let messageType = 'file';
             if (mimetype.startsWith('image/')) messageType = 'image';
             else if (mimetype.startsWith('video/')) messageType = 'video';
             else if (mimetype.startsWith('audio/')) messageType = 'audio';
+            else if (mimetype.includes('pdf')) messageType = 'file';
+            else if (mimetype.includes('word') || mimetype.includes('officedocument.wordprocessingml')) messageType = 'file';
+            else if (mimetype.includes('excel') || mimetype.includes('officedocument.spreadsheetml')) messageType = 'file';
+            else if (mimetype.includes('presentation') || mimetype.includes('officedocument.presentationml')) messageType = 'file';
 
-            handleSendMessage(null, { messageType, fileUrl: url });
-            toast.success('File uploaded successfully');
+            handleSendMessage(null, { 
+                messageType, 
+                fileUrl: url,
+                content: content.trim() || `Attachment: ${originalName || 'File'}`
+            });
+            toast.success(`${messageType.charAt(0).toUpperCase() + messageType.slice(1)} uploaded`);
         } catch (error) {
             toast.error(error.response?.data?.message || 'Upload failed');
         } finally {
