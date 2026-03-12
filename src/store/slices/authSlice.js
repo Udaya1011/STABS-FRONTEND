@@ -16,7 +16,11 @@ const initialState = {
 // Register user
 export const register = createAsyncThunk('auth/register', async (userData, thunkAPI) => {
     try {
-        const response = await axios.post(`${API_URL}/register`, userData);
+        const cleanedData = {
+            ...userData,
+            email: userData.email.trim().toLowerCase()
+        };
+        const response = await axios.post(`${API_URL}/register`, cleanedData);
         if (response.data) {
             localStorage.setItem('user', JSON.stringify(response.data));
         }
@@ -30,7 +34,11 @@ export const register = createAsyncThunk('auth/register', async (userData, thunk
 // Login user
 export const login = createAsyncThunk('auth/login', async (userData, thunkAPI) => {
     try {
-        const response = await axios.post(`${API_URL}/login`, userData);
+        const cleanedData = {
+            ...userData,
+            email: userData.email.trim().toLowerCase()
+        };
+        const response = await axios.post(`${API_URL}/login`, cleanedData);
         if (response.data) {
             localStorage.setItem('user', JSON.stringify(response.data));
         }

@@ -57,10 +57,23 @@ const FaceScanModal = ({ isOpen, onClose, onScanSuccess }) => {
         setScanning(true);
         setError(null);
         
+        // Mobile Safari / Chrome require secure context for camera
+        if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            setError('Face scanning requires a secure connection (HTTPS). Please check your URL.');
+            setScanning(false);
+            return;
+        }
+
         try {
+            // Using more robust options for mobile
+            const options = new faceapi.TinyFaceDetectorOptions({
+                inputSize: 320,
+                scoreThreshold: 0.5
+            });
+
             const detection = await faceapi.detectSingleFace(
                 videoRef.current,
-                new faceapi.TinyFaceDetectorOptions()
+                options
             ).withFaceLandmarks().withFaceDescriptor();
 
             if (detection) {
@@ -70,10 +83,11 @@ const FaceScanModal = ({ isOpen, onClose, onScanSuccess }) => {
                     handleClose();
                 }, 1000);
             } else {
-                setError('No face detected. Please ensure your face is clearly visible.');
+                setError('No face detected. Please ensure your face is clearly visible and well-lit.');
             }
         } catch (err) {
-            setError('Error during face scan.');
+            console.error('Face scan error:', err);
+            setError('Error during face scan. Please ensure camera permissions are granted.');
         } finally {
             setScanning(false);
         }

@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5006/api';
+const API_URL = '/api/attendance';
 
 // Submit Attendance
 export const submitAttendance = createAsyncThunk(
@@ -14,7 +14,7 @@ export const submitAttendance = createAsyncThunk(
                     Authorization: `Bearer ${token}`,
                 },
             };
-            const response = await axios.post(`${API_URL}/attendance`, attendanceData, config);
+            const response = await axios.post(API_URL, attendanceData, config);
             return response.data;
         } catch (error) {
             const message = error.response?.data?.message || error.message || error.toString();
@@ -34,7 +34,7 @@ export const getSubjectAttendance = createAsyncThunk(
                     Authorization: `Bearer ${token}`,
                 },
             };
-            const response = await axios.get(`${API_URL}/attendance/subject/${subjectId}`, config);
+            const response = await axios.get(`${API_URL}/subject/${subjectId}`, config);
             return response.data;
         } catch (error) {
             const message = error.response?.data?.message || error.message || error.toString();
@@ -54,7 +54,7 @@ export const getStudentAttendance = createAsyncThunk(
                     Authorization: `Bearer ${token}`,
                 },
             };
-            const response = await axios.get(`${API_URL}/attendance/student/${studentId}`, config);
+            const response = await axios.get(`${API_URL}/student/${studentId}`, config);
             return response.data;
         } catch (error) {
             const message = error.response?.data?.message || error.message || error.toString();
