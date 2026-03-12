@@ -65,7 +65,7 @@ const WebRTCCall = () => {
         const backendUrl = (isProd && (envURL?.includes('localhost'))) ? prodURL : (envURL || (isProd ? prodURL : ''));
         const s = io(backendUrl, {
             withCredentials: true,
-            transports: ['websocket', 'polling']
+            transports: ['polling', 'websocket']
         });
         setSocket(s);
         socketRef.current = s;

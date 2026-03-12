@@ -53,7 +53,7 @@ const SocketListener = () => {
         const backendUrl = (isProd && (envURL?.includes('localhost'))) ? prodURL : (envURL || (isProd ? prodURL : ''));
         const socket = io(backendUrl, {
             withCredentials: true,
-            transports: ['websocket', 'polling']
+            transports: ['polling', 'websocket']
         });
 
         socket.on('connect', () => {
