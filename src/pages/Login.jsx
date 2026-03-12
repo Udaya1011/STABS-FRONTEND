@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { login, reset } from '../store/slices/authSlice';
-import { Mail, Lock, Loader2, ChevronRight, GraduationCap, Eye, EyeOff } from 'lucide-react';
+import { login, loginWithFace, reset } from '../store/slices/authSlice';
+import { Mail, Lock, Loader2, ChevronRight, GraduationCap, Eye, EyeOff, Camera } from 'lucide-react';
+import FaceScanModal from '../components/FaceScanModal';
 
 const Login = () => {
     const [formData, setFormData] = useState({
@@ -11,6 +12,7 @@ const Login = () => {
         password: 'adminpassword123',
     });
     const [showPassword, setShowPassword] = useState(false);
+    const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
 
     const { email, password } = formData;
 
@@ -44,6 +46,10 @@ const Login = () => {
     const onSubmit = (e) => {
         e.preventDefault();
         dispatch(login({ email, password }));
+    };
+
+    const handleFaceLogin = (descriptor) => {
+        dispatch(loginWithFace({ faceDescriptor: descriptor }));
     };
 
     return (
@@ -158,9 +164,30 @@ const Login = () => {
                         </button>
                     </form>
 
+                    <div className="mt-6 flex items-center justify-center space-x-4">
+                        <hr className="w-1/3 border-secondary-200" />
+                        <span className="text-secondary-400 font-medium text-sm">OR</span>
+                        <hr className="w-1/3 border-secondary-200" />
+                    </div>
 
+                    <div className="mt-6">
+                        <button
+                            type="button"
+                            onClick={() => setIsFaceModalOpen(true)}
+                            className="w-full py-4 flex items-center justify-center gap-3 bg-white border border-secondary-200 rounded-xl font-bold text-secondary-700 shadow-sm hover:border-primary-300 hover:text-primary-600 transition-all active:scale-95"
+                        >
+                            <Camera size={20} />
+                            Login with Face Scannerrrr   
+                        </button>
+                    </div>
                 </div>
             </div>
+            
+            <FaceScanModal 
+                isOpen={isFaceModalOpen} 
+                onClose={() => setIsFaceModalOpen(false)} 
+                onScanSuccess={handleFaceLogin} 
+            />
         </div>
     );
 };

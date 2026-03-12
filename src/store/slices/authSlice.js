@@ -41,6 +41,20 @@ export const login = createAsyncThunk('auth/login', async (userData, thunkAPI) =
     }
 });
 
+// Login with Face
+export const loginWithFace = createAsyncThunk('auth/loginWithFace', async (faceData, thunkAPI) => {
+    try {
+        const response = await axios.post(`${API_URL}/login-face`, faceData);
+        if (response.data) {
+            localStorage.setItem('user', JSON.stringify(response.data));
+        }
+        return response.data;
+    } catch (error) {
+        const message = error.response?.data?.message || error.message || error.toString();
+        return thunkAPI.rejectWithValue(message);
+    }
+});
+
 // Logout user
 export const logout = createAsyncThunk('auth/logout', async () => {
     localStorage.removeItem('user');
@@ -59,6 +73,23 @@ export const updateProfile = createAsyncThunk('auth/updateProfile', async (userD
         if (response.data) {
             localStorage.setItem('user', JSON.stringify(response.data));
         }
+        return response.data;
+    } catch (error) {
+        const message = error.response?.data?.message || error.message || error.toString();
+        return thunkAPI.rejectWithValue(message);
+    }
+});
+
+// Save Face Descriptor
+export const saveFaceDescriptor = createAsyncThunk('auth/saveFaceDescriptor', async (faceData, thunkAPI) => {
+    try {
+        const token = thunkAPI.getState().auth.user.token;
+        const config = {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        };
+        const response = await axios.post(`${API_URL}/profile/face`, faceData, config);
         return response.data;
     } catch (error) {
         const message = error.response?.data?.message || error.message || error.toString();
@@ -107,6 +138,20 @@ export const authSlice = createSlice({
                 state.message = action.payload;
                 state.user = null;
             })
+            .addCase(loginWithFace.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(loginWithFace.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.user = action.payload;
+            })
+            .addCase(loginWithFace.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+                state.user = null;
+            })
             .addCase(logout.fulfilled, (state) => {
                 state.user = null;
             })
@@ -119,6 +164,18 @@ export const authSlice = createSlice({
                 state.user = action.payload;
             })
             .addCase(updateProfile.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            .addCase(saveFaceDescriptor.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(saveFaceDescriptor.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+            })
+            .addCase(saveFaceDescriptor.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

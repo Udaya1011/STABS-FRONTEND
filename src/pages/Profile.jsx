@@ -2,9 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Mail, Phone, MapPin, Shield, Camera, Edit2, Check, X, ShieldCheck, GraduationCap, Loader2, Key, Eye, EyeOff, Search, Map } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { updateProfile } from '../store/slices/authSlice';
+import { updateProfile, saveFaceDescriptor } from '../store/slices/authSlice';
 import axios from 'axios';
 import getImageUrl from '../utils/imageUtils';
+import FaceScanModal from '../components/FaceScanModal';
 
 const Profile = () => {
     const { user, isLoading: isUpdating } = useSelector((state) => state.auth);
@@ -12,6 +13,7 @@ const Profile = () => {
     const fileInputRef = useRef(null);
     const [isEditing, setIsEditing] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
 
 
 
@@ -98,7 +100,14 @@ const Profile = () => {
         }
     };
 
-
+    const handleSetFaceLock = async (descriptor) => {
+        try {
+            await dispatch(saveFaceDescriptor({ faceDescriptor: descriptor })).unwrap();
+            toast.success('Face lock set successfully!');
+        } catch (error) {
+            toast.error(error || 'Failed to set face lock');
+        }
+    };
 
     const triggerFileInput = () => {
         fileInputRef.current.click();
@@ -232,14 +241,22 @@ const Profile = () => {
                     </div>
 
                     <div className="card-premium">
-                        <h3 className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mb-8 border-b border-secondary-50 pb-2">Account Status</h3>
-                        <div className="flex items-center gap-4 p-4 bg-secondary-50 rounded-2xl border border-secondary-100 group hover:bg-white hover:border-success-200 transition-all cursor-default">
+                        <h3 className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mb-8 border-b border-secondary-50 pb-2">Security Hub</h3>
+                        <div className="flex items-center gap-4 p-4 bg-secondary-50 rounded-2xl border border-secondary-100 group hover:bg-white hover:border-success-200 transition-all cursor-default mb-4">
                             <ShieldCheck className="text-success-500 group-hover:scale-110 transition-transform" size={28} />
                             <div>
                                 <p className="text-sm font-bold text-secondary-800">Identity Verified</p>
                                 <p className="text-[10px] text-secondary-500 font-bold uppercase tracking-wider">Educational Access Approved</p>
                             </div>
                         </div>
+
+                        <button 
+                            onClick={() => setIsFaceModalOpen(true)}
+                            className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-primary-200 rounded-xl font-bold text-primary-600 shadow-sm hover:border-primary-400 hover:text-primary-700 transition-all active:scale-95"
+                        >
+                            <Camera size={18} />
+                            Set Up Face Lock
+                        </button>
                     </div>
                 </div>
 
@@ -439,6 +456,12 @@ const Profile = () => {
                     </div>
                 </div>
             </div>
+            
+            <FaceScanModal 
+                isOpen={isFaceModalOpen} 
+                onClose={() => setIsFaceModalOpen(false)} 
+                onScanSuccess={handleSetFaceLock} 
+            />
         </div>
     );
 };
