@@ -45,9 +45,16 @@ const SocketListener = () => {
     useEffect(() => {
         if (!user?._id) return;
 
-        const isProd = import.meta.env.PROD;
-        const backendUrl = import.meta.env.VITE_API_URL || (isProd ? 'https://rvscas-backend.onrender.com' : 'http://localhost:5006');
-        const socket = io(backendUrl);
+        const isProd = import.meta.env.PROD || window.location.hostname.includes('onrender.com');
+        const prodURL = 'https://rvscas-backend.onrender.com';
+        const envURL = import.meta.env.VITE_API_URL;
+        
+        // If on Render, strictly use prodURL even if .env says localhost
+        const backendUrl = (isProd && (envURL?.includes('localhost'))) ? prodURL : (envURL || (isProd ? prodURL : ''));
+        const socket = io(backendUrl, {
+            withCredentials: true,
+            transports: ['websocket', 'polling']
+        });
 
         socket.on('connect', () => {
             socket.emit('join', user._id);

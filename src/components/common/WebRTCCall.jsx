@@ -58,9 +58,15 @@ const WebRTCCall = () => {
 
     useEffect(() => {
         if (!user) return;
-        const isProd = import.meta.env.PROD;
-        const backendUrl = import.meta.env.VITE_API_URL || (isProd ? 'https://rvscas-backend.onrender.com' : '');
-        const s = io(backendUrl);
+        const isProd = import.meta.env.PROD || window.location.hostname.includes('onrender.com');
+        const prodURL = 'https://rvscas-backend.onrender.com';
+        const envURL = import.meta.env.VITE_API_URL;
+        
+        const backendUrl = (isProd && (envURL?.includes('localhost'))) ? prodURL : (envURL || (isProd ? prodURL : ''));
+        const s = io(backendUrl, {
+            withCredentials: true,
+            transports: ['websocket', 'polling']
+        });
         setSocket(s);
         socketRef.current = s;
 

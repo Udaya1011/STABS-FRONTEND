@@ -5,9 +5,14 @@ const setupAxios = () => {
     const isProd = import.meta.env.PROD || window.location.hostname.includes('onrender.com');
     const prodURL = 'https://rvscas-backend.onrender.com';
     
-    axios.defaults.baseURL = import.meta.env.VITE_API_URL || (isProd ? prodURL : '');
+    // STRICT FIX: If we are on Render portal, we MUST use Render backend, 
+    // even if VITE_API_URL is accidentally set to localhost in .env
+    const envURL = import.meta.env.VITE_API_URL;
+    const isEnvLocal = envURL && (envURL.includes('localhost') || envURL.includes('127.0.0.1'));
     
-    axios.defaults.timeout = 90000; // Increased to 90s for slow mobile networks and Render wake-up
+    axios.defaults.baseURL = (isProd && isEnvLocal) ? prodURL : (envURL || (isProd ? prodURL : ''));
+    
+    axios.defaults.timeout = 120000; // 2 minutes to handle heavy mobile loads + Render wakes
 
     axios.interceptors.request.use(
         (config) => {

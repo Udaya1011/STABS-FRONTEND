@@ -1,8 +1,11 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const isProd = import.meta.env.PROD;
-const API_URL = import.meta.env.VITE_API_URL || (isProd ? 'https://rvscas-backend.onrender.com/api' : '/api');
+const isProd = import.meta.env.PROD || window.location.hostname.includes('onrender.com');
+const prodURL = 'https://rvscas-backend.onrender.com/api';
+const envURL = import.meta.env.VITE_API_URL;
+
+const API_URL = (isProd && (envURL?.includes('localhost'))) ? prodURL : (envURL || (isProd ? prodURL : '/api'));
 
 export const getRegistry = createAsyncThunk('registry/get', async (_, thunkAPI) => {
     try {
