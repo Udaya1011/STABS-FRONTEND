@@ -119,7 +119,9 @@ const Chat = () => {
             });
             toast.success(`${messageType.charAt(0).toUpperCase() + messageType.slice(1)} uploaded`);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Upload failed');
+            console.error('FULL UPLOAD ERROR:', error);
+            const errMsg = error.response?.data?.message || error.message || 'Upload failed';
+            toast.error(`Upload failed: ${errMsg}`);
         } finally {
             setUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
