@@ -81,7 +81,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 {/* Toggle Arrow Button */}
                 <button
                     onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="absolute -right-3 top-20 w-6 h-6 bg-white text-secondary-400 hover:text-primary-600 rounded-full hidden md:flex items-center justify-center border border-secondary-100 group z-50 transition-colors"
+                    className="absolute -right-3 top-20 w-6 h-6 bg-white text-secondary-400 hover:text-primary-600 rounded-full hidden md:flex items-center justify-center group z-50 transition-colors"
                 >
                     {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
                 </button>

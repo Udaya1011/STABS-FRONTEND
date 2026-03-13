@@ -701,9 +701,9 @@ const Chat = () => {
                                 />
                             </div>
                             {isRecording ? (
-                                <div className="flex-1 flex items-center justify-between px-6 bg-red-50 border border-red-100 rounded-xl py-3 animate-pulse shadow-inner">
+                                <div className="flex-1 flex items-center justify-between px-6 bg-red-50 border border-red-100 rounded-xl py-3 shadow-inner">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-3 h-3 bg-red-600 rounded-full animate-ping"></div>
+                                        <div className="w-3 h-3 bg-red-600 rounded-full"></div>
                                         <div className="flex flex-col">
                                             <span className="text-red-700 font-black text-[10px] uppercase tracking-[0.2em] leading-none mb-1">Live Capture</span>
                                             <span className="text-red-900 font-black text-lg tracking-widest font-mono">{formatTime(recordingTime)}</span>

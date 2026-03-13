@@ -166,3 +166,72 @@
 .filter-white-controls {
   filter: invert(100%) sepia(0%) rotate(0deg) brightness(200%) contrast(100%);
 }
+
+/* Custom Maroon Matrix Calendar */
+.react-calendar {
+  border: none !important;
+  font-family: 'Outfit', sans-serif !important;
+  background: transparent !important;
+  width: 100% !important;
+}
+
+.react-calendar__navigation {
+  margin-bottom: 1rem !important;
+}
+
+.react-calendar__navigation button {
+  color: #800000 !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.1em !important;
+  border-radius: 12px !important;
+}
+
+.react-calendar__navigation button:hover {
+  background-color: #f0f7ff !important;
+  color: #3b82f6 !important; /* Blue highlight */
+}
+
+.react-calendar__month-view__weekdays {
+  color: #800000 !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  font-size: 0.6rem !important;
+  letter-spacing: 0.05em !important;
+  opacity: 0.8 !important;
+}
+
+.react-calendar__tile {
+  padding: 0.75rem 0.5rem !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+}
+
+.react-calendar__tile:hover {
+  background-color: #800000 !important;
+  color: white !important;
+}
+
+.react-calendar__tile--now {
+  background: #fff7ed !important;
+  color: #800000 !important;
+  border: 1px dashed #800000 !important;
+}
+
+.react-calendar__tile--active {
+  background: #800000 !important;
+  color: #facc15 !important; /* Yellow text for selection */
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1) !important;
+}
+
+.react-calendar__tile--active:enabled:hover,
+.react-calendar__tile--active:enabled:focus {
+  background: #800000 !important;
+}
+
+.react-calendar__month-view__days__day--neighboringMonth {
+  opacity: 0.25 !important;
+}

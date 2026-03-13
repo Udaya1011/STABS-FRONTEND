@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Mail, Phone, MapPin, Shield, Camera, Edit2, Check, X, ShieldCheck, GraduationCap, Loader2, Key, Eye, EyeOff, Search, Map, RefreshCcw } from 'lucide-react';
+import { Mail, Phone, MapPin, Shield, Camera, Edit2, Check, X, ShieldCheck, GraduationCap, Loader2, Key, Eye, EyeOff, Search, Map, RefreshCcw, LogOut } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { updateProfile, saveFaceDescriptor } from '../store/slices/authSlice';
+import { updateProfile, saveFaceDescriptor, logout, updateUserLocally } from '../store/slices/authSlice';
 import axios from 'axios';
 import getImageUrl from '../utils/imageUtils';
 import FaceScanModal from '../components/FaceScanModal';
@@ -26,9 +26,27 @@ const Profile = () => {
         password: '',
         confirmPassword: '',
         designation: user?.designation || (user?.role === 'admin' ? 'Administrator' : 'Senior Faculty'),
-        bio: user?.bio || (user?.role === 'admin' ? 'Strategic leader dedicated to academic excellence at RVS CAS.' : 'Dedicated academic professional committed to excellence in education and innovative research.')
     });
     const [showPassword, setShowPassword] = useState(false);
+
+    useEffect(() => {
+        // Background sync of profile data to ensure local state is up-to-date
+        const syncProfile = async () => {
+            try {
+                const token = user?.token;
+                if (!token) return;
+                const config = { headers: { Authorization: `Bearer ${token}` } };
+                const res = await axios.get('/api/auth/profile', config);
+                if (res.data) {
+                    dispatch(updateUserLocally({ ...res.data, token: user?.token || res.data.token }));
+                    console.log('Profile synced from server:', res.data);
+                }
+            } catch (err) {
+                console.error('Profile sync failed:', err);
+            }
+        };
+        syncProfile();
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -39,9 +57,15 @@ const Profile = () => {
                 phone: user.phone || '',
                 address: user.address || '',
                 username: user.username || '',
+                designation: user.designation || (user.role === 'admin' ? 'Administrator' : 'Senior Faculty'),
             }));
         }
     }, [user]);
+
+    const handleLogout = () => {
+        dispatch(logout());
+        toast.success('Logged out successfully');
+    };
 
     const handleUpdate = async (e) => {
         e.preventDefault();
@@ -151,9 +175,10 @@ const Profile = () => {
                             <button
                                 onClick={triggerFileInput}
                                 disabled={isUploading}
-                                className="absolute bottom-3 right-3 p-2.5 bg-primary-600 text-white rounded-xl shadow-lg hover:bg-primary-700 transition-all opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0"
+                                className="absolute bottom-3 right-3 p-3 bg-primary-600 text-white rounded-2xl shadow-lg hover:bg-primary-700 transition-all opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 flex items-center justify-center active:scale-95"
+                                title="Update Image"
                             >
-                                <Camera size={18} />
+                                <Camera size={20} />
                             </button>
                         </div>
 
@@ -166,7 +191,9 @@ const Profile = () => {
                             </div>
                             <p className="text-secondary-500 font-bold flex items-center gap-2">
                                 <Shield size={18} className="text-primary-500" />
-                                {user?.role === 'admin' ? 'Admin of RVS CAS' : 'Senior Faculty • Department of Computer Engineering'}
+                                 {user?.role === 'admin' ? 'Admin of RVS CAS' : 
+                                  user?.role === 'student' ? `Student • Course: ${user?.department?.name || 'Department of Computer Engineering'}` :
+                                  `${user?.designation || 'Senior Faculty'} • ${user?.department?.name || 'Department of Computer Engineering'}`}
                             </p>
                         </div>
 
@@ -190,23 +217,28 @@ const Profile = () => {
                                     SYNC SLOTS
                                 </button>
                             )}
-                            <button
-                                onClick={() => setIsEditing(!isEditing)}
-                                className="flex items-center gap-2 px-6 py-3 bg-white border border-secondary-200 rounded-xl font-bold text-secondary-700 shadow-sm hover:border-primary-300 hover:text-primary-600 transition-all active:scale-95"
-                            >
-                                {isEditing ? <><X size={18} /> Cancel</> : <><Edit2 size={18} /> Update Profile</>}
-                            </button>
+
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Sidebar Info */}
-                <div className="space-y-6">
-                    <div className="card-premium">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+                {/* Information Desk Card */}
+                <div className="card-premium h-full flex flex-col justify-start">
                         <h3 className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mb-8 border-b border-secondary-50 pb-2">Information Desk</h3>
                         <div className="space-y-6">
+                            {user?.role === 'student' && (
+                                <div className="flex items-center gap-4 text-secondary-600">
+                                    <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0 border border-orange-100">
+                                        <Shield size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold text-secondary-400 tracking-wider">Register Number</p>
+                                        <p className="text-sm font-bold text-secondary-800">{user?.registerNumber || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            )}
                             <div className="flex items-center gap-4 text-secondary-600">
                                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-accent-blue flex items-center justify-center flex-shrink-0 border border-blue-100">
                                     <Mail size={18} />
@@ -216,263 +248,97 @@ const Profile = () => {
                                     <p className="text-sm font-bold text-secondary-800 truncate">{user?.email}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-4 text-secondary-600">
-                                <div className="w-10 h-10 rounded-xl bg-success-50 text-success-600 flex items-center justify-center flex-shrink-0 border border-success-100">
-                                    <Phone size={18} />
+                            {user?.role === 'student' && (
+                                <div className="flex items-center gap-4 text-secondary-600">
+                                    <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center flex-shrink-0 border border-primary-100">
+                                        <GraduationCap size={18} />
+                                    </div>
+                                     <div>
+                                         <p className="text-[10px] uppercase font-bold text-secondary-400 tracking-wider">Course Name</p>
+                                         <p className="text-sm font-bold text-secondary-800">{user?.department?.name || 'N/A'}</p>
+                                     </div>
                                 </div>
-                                <div>
-                                    <p className="text-[10px] uppercase font-bold text-secondary-400 tracking-wider">Phone number</p>
-                                    <p className="text-sm font-bold text-secondary-800">{user?.phone || '+1 (555) 000-0000'}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4 text-secondary-600">
-                                <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center flex-shrink-0 border border-primary-100">
-                                    <MapPin size={18} />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] uppercase font-bold text-secondary-400 tracking-wider">Office Location</p>
-                                    <p className="text-sm font-bold text-secondary-800">{user?.address || 'Block A, Level 3, R-302'}</p>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     </div>
 
-                    <div className="card-premium">
-                        <h3 className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mb-8 border-b border-secondary-50 pb-2">Live Location Hub</h3>
-                        <div className="space-y-4">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400" size={16} />
-                                <input
-                                    type="text"
-                                    className="input-field pl-10 text-xs"
-                                    placeholder="Search location..."
-                                />
-                            </div>
-                            <div className="aspect-square rounded-2xl bg-secondary-100 flex items-center justify-center border border-secondary-200 overflow-hidden relative group">
-                                <div className="absolute inset-0 bg-primary-600/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
-                                    <button className="px-4 py-2 bg-white rounded-lg text-[10px] font-bold text-primary-600 border border-primary-100 shadow-sm">Enable Live Tracking</button>
-                                </div>
-                                <Map className="text-secondary-300" size={48} />
-                            </div>
-                            <p className="text-[10px] text-secondary-400 font-medium text-center">Powered by GPS Core Tracking Systems</p>
-                        </div>
-                    </div>
-
-                    <div className="card-premium">
-                        <h3 className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mb-8 border-b border-secondary-50 pb-2">Security Hub</h3>
-                        <div className="flex items-center gap-4 p-4 bg-secondary-50 rounded-2xl border border-secondary-100 group hover:bg-white hover:border-success-200 transition-all cursor-default mb-4">
-                            <ShieldCheck className="text-success-500 group-hover:scale-110 transition-transform" size={28} />
-                            <div>
-                                <p className="text-sm font-bold text-secondary-800">Identity Verified</p>
-                                <p className="text-[10px] text-secondary-500 font-bold uppercase tracking-wider">Educational Access Approved</p>
-                            </div>
-                        </div>
-
-                        <button 
-                            onClick={() => setIsFaceModalOpen(true)}
-                            className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-primary-200 rounded-xl font-bold text-primary-600 shadow-sm hover:border-primary-400 hover:text-primary-700 transition-all active:scale-95"
-                        >
-                            <Camera size={18} />
-                            Set Up Face Lock
-                        </button>
-                    </div>
-                </div>
-
-                {/* Main Profile Info */}
-                <div className="md:col-span-2 space-y-8">
-                    {isEditing ? (
-                        <>
-                            {/* Professional Summary Edit Box */}
-                            <div className="card-premium">
-                                <h2 className="text-xl font-bold text-secondary-900 mb-8 flex items-center gap-2 transition-colors">
-                                    <span className="w-1.5 h-6 bg-primary-600 rounded-full"></span>
-                                    Professional Summary
-                                </h2>
-                                <form onSubmit={handleUpdate} className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Username</label>
-                                            <input
-                                                type="text"
-                                                className="input-field"
-                                                value={formData.username}
-                                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                                placeholder="Unique username"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Preferred Name</label>
-                                            <input
-                                                type="text"
-                                                className="input-field"
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                placeholder="Your name"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Designation</label>
-                                            <input
-                                                type="text"
-                                                className="input-field"
-                                                value={formData.designation}
-                                                onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                                                placeholder="e.g. Professor"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Phone</label>
-                                            <input
-                                                type="text"
-                                                className="input-field"
-                                                value={formData.phone}
-                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                placeholder="Phone number"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Address</label>
-                                            <input
-                                                type="text"
-                                                className="input-field"
-                                                value={formData.address}
-                                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                                placeholder="Office/Home address"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Email Address</label>
-                                            <input
-                                                type="email"
-                                                className="input-field"
-                                                value={formData.email}
-                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                placeholder="Official email address"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Personal Bio</label>
-                                        <textarea
-                                            rows="4"
-                                            className="input-field"
-                                            value={formData.bio}
-                                            onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                                            placeholder="Tell us about yourself..."
-                                        ></textarea>
-                                    </div>
-                                    <div className="flex justify-end pt-4">
-                                        <button
-                                            type="submit"
-                                            disabled={isUpdating}
-                                            className="btn-primary flex items-center gap-2 px-10 py-3.5 shadow-xl shadow-primary-500/20"
-                                        >
-                                            {isUpdating ? <Loader2 className="animate-spin" /> : <Check size={20} />}
-                                            Update Profile
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-
-                            {/* Separate Password Reset Option Box */}
-                            <div className="card-premium">
-                                <h2 className="text-xl font-bold text-secondary-900 mb-8 flex items-center gap-2 transition-colors">
-                                    <span className="w-1.5 h-6 bg-accent-blue rounded-full"></span>
-                                    Security: Password Reset Option
-                                </h2>
-                                <form onSubmit={handleUpdate} className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2 relative">
-                                            <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">New Secure Password</label>
-                                            <div className="relative">
-                                                <input
-                                                    type={showPassword ? "text" : "password"}
-                                                    className="input-field pr-10"
-                                                    value={formData.password}
-                                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                    placeholder="••••••••"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400 hover:text-primary-500"
-                                                >
-                                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Confirm New Password</label>
-                                            <input
-                                                type={showPassword ? "text" : "password"}
-                                                className="input-field"
-                                                value={formData.confirmPassword}
-                                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                                placeholder="Confirm password"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-end pt-2">
-                                        <button
-                                            type="submit"
-                                            disabled={isUpdating}
-                                            className="px-6 py-2.5 bg-secondary-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary-600 transition-all shadow-lg"
-                                        >
-                                            Verify & Reset Password
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="card-premium">
-                            <h2 className="text-xl font-bold text-secondary-900 mb-8 flex items-center gap-2 transition-colors">
-                                <span className="w-1.5 h-6 bg-primary-600 rounded-full"></span>
-                                Professional Summary
-                            </h2>
-                            <div className="space-y-8">
-                                <p className="text-secondary-600 leading-relaxed font-medium text-lg italic transition-colors">
-                                    "{formData.bio}"
-                                </p>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
-                                    <div className="p-5 bg-secondary-50 border border-secondary-100 rounded-2xl group hover:bg-white hover:border-primary-200 transition-all">
-                                        <p className="text-[10px] uppercase font-bold text-secondary-400 mb-3 tracking-widest">Primary Division</p>
-                                        <div className="font-bold text-secondary-900 flex items-center gap-3 transition-colors">
-                                            <div className="p-2 bg-primary-100 text-primary-600 rounded-lg group-hover:scale-110 transition-transform">
-                                                <GraduationCap size={20} />
-                                            </div>
-                                            Computer Science Engineering
-                                        </div>
-                                    </div>
-                                    <div className="p-5 bg-secondary-50 border border-secondary-100 rounded-2xl group hover:bg-white hover:border-primary-200 transition-all">
-                                        <p className="text-[10px] uppercase font-bold text-secondary-400 mb-3 tracking-widest">Professional Standing</p>
-                                        <div className="font-bold text-secondary-900 flex items-center gap-3 transition-colors">
-                                            <div className="p-2 bg-secondary-200 text-secondary-600 rounded-lg group-hover:scale-110 transition-transform">
-                                                <Shield size={20} />
-                                            </div>
-                                            Member Since January 2024
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="card-premium">
-                        <h2 className="text-xl font-bold text-secondary-900 mb-8 flex items-center gap-2 transition-colors">
-                            <span className="w-1.5 h-6 bg-accent-purple rounded-full"></span>
-                            Faculty Achievements
+                    {/* Password Reset Card */}
+                    <div className="card-premium h-full flex flex-col justify-start">
+                        <h2 className="text-lg font-bold text-secondary-900 mb-6 flex items-center gap-2 transition-colors">
+                            <span className="w-1.5 h-6 bg-accent-blue rounded-full"></span>
+                            Security: Password Reset Access
                         </h2>
-                        <div className="flex flex-wrap gap-4">
-                            {['Top Mentor 2023', 'Tech Evangelist', 'Research Lead', 'Dean\'s Honor List', 'Publication Award'].map(badge => (
-                                <span key={badge} className="px-5 py-2.5 bg-secondary-50 text-secondary-700 text-xs font-bold rounded-xl border border-secondary-100 hover:bg-white hover:border-primary-300 hover:text-primary-600 transition-all cursor-default uppercase tracking-wider">
-                                    {badge}
-                                </span>
-                            ))}
+                        <form onSubmit={handleUpdate} className="space-y-5">
+                            <div className="grid grid-cols-1 gap-5">
+                                <div className="space-y-2 relative">
+                                    <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">New Secure Password</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            className="input-field pr-10"
+                                            value={formData.password}
+                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                            placeholder="••••••••"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400 hover:text-primary-500"
+                                        >
+                                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Confirm New Password</label>
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        className="input-field"
+                                        value={formData.confirmPassword}
+                                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                        placeholder="Confirm password"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-start mt-2">
+                                <button
+                                    type="submit"
+                                    disabled={isUpdating}
+                                    className="px-5 py-3 bg-secondary-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary-600 transition-all shadow-lg flex items-center justify-center gap-2 w-full"
+                                >
+                                    <Key size={14} />
+                                    Verify & Reset Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* Biometric Security Card */}
+                    <div className="card-premium h-full">
+                        <h2 className="text-lg font-bold text-secondary-900 mb-6 flex items-center gap-2 transition-colors">
+                            <span className="w-1.5 h-6 bg-primary-600 rounded-full"></span>
+                            Biometric Security
+                        </h2>
+                        
+                        <div className="flex flex-col items-center justify-center text-center py-2 px-4 space-y-5 h-full min-h-[220px]">
+                            <div className="w-16 h-16 bg-primary-50 text-primary-600 rounded-full flex items-center justify-center border border-primary-100 shadow-sm relative group">
+                                <div className="absolute inset-0 bg-primary-400 opacity-20 rounded-full group-hover:animate-none"></div>
+                                <Camera size={32} className="relative z-10" />
+                            </div>
+                            <div>
+                                <h3 className="text-md font-bold text-secondary-900 mb-1">Face Recognition Setup</h3>
+                                <p className="text-xs text-secondary-500 px-2 leading-relaxed">Configure biometric access for a faster, more secure login experience without passwords.</p>
+                            </div>
+                            
+                            <button 
+                                onClick={() => setIsFaceModalOpen(true)}
+                                className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-primary-200 rounded-xl font-bold text-primary-600 shadow-sm hover:border-primary-400 hover:text-primary-700 transition-all active:scale-95"
+                            >
+                                <Camera size={16} />
+                                Initialize Face Scan
+                            </button>
                         </div>
                     </div>
-                </div>
             </div>
             
             <FaceScanModal 

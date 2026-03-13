@@ -18,11 +18,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { getSubjects } from '../store/slices/subjectSlice';
+import { getDepartments } from '../store/slices/departmentSlice';
 
 const Videos = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
     const { subjects } = useSelector((state) => state.subjects);
+    const { departments } = useSelector((state) => state.departments);
 
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -31,12 +33,13 @@ const Videos = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [uploading, setUploading] = useState(false);
     const [selectedVideo, setSelectedVideo] = useState(null);
-    const [editData, setEditData] = useState({ id: '', title: '', description: '', subject: '', category: '' });
+    const [editData, setEditData] = useState({ id: '', title: '', description: '', subject: '', department: '', category: '' });
 
     const [newVideo, setNewVideo] = useState({
         title: '',
         description: '',
         subject: '',
+        department: '',
         category: 'Lecture',
         videoFile: null
     });
@@ -44,6 +47,7 @@ const Videos = () => {
     useEffect(() => {
         if (user?.token) {
             dispatch(getSubjects());
+            dispatch(getDepartments());
             fetchVideos();
         }
 
@@ -82,6 +86,7 @@ const Videos = () => {
         formData.append('title', newVideo.title);
         formData.append('description', newVideo.description);
         formData.append('subject', newVideo.subject);
+        formData.append('department', newVideo.department);
         formData.append('category', newVideo.category);
         formData.append('video', newVideo.videoFile);
 
@@ -90,7 +95,7 @@ const Videos = () => {
             await axios.post('/api/videos', formData);
             toast.success('Resource published successfully');
             setShowUploadModal(false);
-            setNewVideo({ title: '', description: '', subject: '', category: 'Lecture', videoFile: null });
+            setNewVideo({ title: '', description: '', subject: '', department: '', category: 'Lecture', videoFile: null });
             fetchVideos();
         } catch (error) {
             console.error('Publishing error:', error.response?.data || error.message);
@@ -117,6 +122,7 @@ const Videos = () => {
             title: video.title,
             description: video.description || '',
             subject: video.subject?._id || video.subject,
+            department: video.department?._id || video.department || '',
             category: video.category || 'Lecture'
         });
         setShowEditModal(true);
@@ -134,10 +140,20 @@ const Videos = () => {
         }
     };
 
-    const filteredVideos = videos.filter(v =>
-        (v.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (v.subject?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredVideos = videos.filter(v => {
+        const matchesSearch = (v.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (v.subject?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+        
+        // Visibility Logic: Students only see videos for their assigned batch or global ones
+        const videoDeptId = v.department?._id || v.department;
+        const userDeptId = user?.department?._id || user?.department;
+
+        const matchesVisibility = user?.role !== 'student' || 
+            !videoDeptId || 
+            videoDeptId === userDeptId;
+
+        return matchesSearch && matchesVisibility;
+    });
 
     return (
         <div className="space-y-8 pb-10">
@@ -194,7 +210,12 @@ const Videos = () => {
 
                             <div className="p-5">
                                 <h3 className="font-bold text-secondary-900 line-clamp-2 leading-tight group-hover:text-primary-600 transition-colors uppercase tracking-tight text-sm mb-2">{video.title}</h3>
-                                <p className="text-[10px] font-bold text-secondary-400 mb-6 uppercase tracking-widest bg-secondary-50 px-2 py-1 rounded w-fit transition-colors">{video.subject?.name || 'General Course'}</p>
+                                <div className="flex gap-2 mb-6">
+                                    <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest bg-secondary-50 px-2 py-1 rounded transition-colors">{video.subject?.name || 'General Course'}</p>
+                                    <p className="text-[10px] font-bold text-primary-600 uppercase tracking-widest bg-primary-50 px-2 py-1 rounded transition-colors">
+                                        {video.department?.programme ? `${video.department.programme} ${video.department.name} ${Array.isArray(video.department.className) ? video.department.className.join(' ') : (video.department.className || '')}`.trim() : 'All Batches'}
+                                    </p>
+                                </div>
 
                                 <div className="flex items-center justify-between pt-4 border-t border-secondary-50 transition-colors">
                                     <div className="flex items-center gap-2">
@@ -269,6 +290,23 @@ const Videos = () => {
                                             {(subjects || []).map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
                                         </select>
                                     </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Assigned Class</label>
+                                        <select
+                                            required
+                                            className="input-field"
+                                            value={newVideo.department}
+                                            onChange={(e) => setNewVideo({ ...newVideo, department: e.target.value })}
+                                        >
+                                            <option value="">Select Class</option>
+                                            {departments.map(d => (
+                                                <option key={d._id} value={d._id}>
+                                                    {d.programme ? `${d.programme} ${d.name} ${Array.isArray(d.className) ? d.className.join(' ') : (d.className || '')}`.trim() : d.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Category</label>
                                         <select
@@ -282,6 +320,7 @@ const Videos = () => {
                                             <option value="Seminar">Seminar</option>
                                         </select>
                                     </div>
+                                </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -387,6 +426,23 @@ const Videos = () => {
                                                 ))}
                                             </select>
                                         </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Target Class</label>
+                                            <select
+                                                required
+                                                className="input-field appearance-none"
+                                                value={editData.department}
+                                                onChange={(e) => setEditData({ ...editData, department: e.target.value })}
+                                            >
+                                                <option value="">Select Class</option>
+                                                {departments.map(d => (
+                                                    <option key={d._id} value={d._id}>
+                                                        {d.programme ? `${d.programme} ${d.name} ${Array.isArray(d.className) ? d.className.join(' ') : (d.className || '')}`.trim() : d.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Category</label>
                                             <select
@@ -400,6 +456,7 @@ const Videos = () => {
                                                 <option value="Seminar">Seminar</option>
                                             </select>
                                         </div>
+                                    </div>
                                     </div>
 
                                     <div className="space-y-2">

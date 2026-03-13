@@ -225,7 +225,7 @@ const Register = () => {
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="w-full group bg-primary-600 hover:bg-primary-700 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-[0_20px_40px_-15px_rgba(158,0,0,0.3)] transition-all active:scale-[0.98] mt-4"
+                                    className="w-full group bg-primary-600 hover:bg-primary-700 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-[0_20px_40px_-15px_rgba(255,255,255,0.3)] transition-all active:scale-[0.98] mt-4"
                                 >
                                     {isLoading ? (
                                         <Loader2 className="animate-spin" size={24} />

@@ -91,16 +91,10 @@ const PortalNavigator = () => {
                 whileHover={{ scale: 1.1, rotate: isOpen ? 90 : 0 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={toggleMenu}
-                className={`w-18 h-18 rounded-3xl flex items-center justify-center shadow-premium transition-all relative z-10 overflow-hidden ${isOpen ? 'bg-secondary-900 text-white' : 'bg-primary-600 text-white hover:bg-primary-700 ring-4 ring-primary-600/10'}`}
+                className={`w-18 h-18 rounded-3xl flex items-center justify-center transition-all relative z-10 overflow-hidden ${isOpen ? 'bg-secondary-900 text-white' : 'bg-primary-600 text-white hover:bg-primary-700'}`}
                 style={{ width: '4.5rem', height: '4.5rem' }}
             >
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-50"></div>
                 {isOpen ? <X size={32} strokeWidth={2.5} /> : <LayoutGrid size={32} strokeWidth={2.5} />}
-                
-                {/* Micro animation pulses when closed */}
-                {!isOpen && (
-                    <span className="absolute inset-0 rounded-3xl border-2 border-white/30 animate-ping opacity-20 pointer-events-none"></span>
-                )}
             </motion.button>
         </div>
     );

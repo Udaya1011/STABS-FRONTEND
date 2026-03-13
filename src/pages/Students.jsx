@@ -144,7 +144,7 @@ const Students = () => {
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest">Student</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest">Reg Number</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest">Email</th>
-                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center">Division</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center">Course</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center">Batch Plan</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-right">Actions</th>
                             </tr>
@@ -198,7 +198,11 @@ const Students = () => {
                                             <span className="text-xs font-medium text-primary-600 truncate max-w-[150px] inline-block">{s.user?.email || 'N/A'}</span>
                                         </td>
                                         <td className="py-4 px-6 text-center">
-                                            <span className="text-xs font-bold text-secondary-700">{s.user?.department?.name || 'General Batch'}</span>
+                                            <span className="text-xs font-bold text-secondary-700">
+                                                {s.user?.department?.name 
+                                                    ? `${s.user.department.name} ${Array.isArray(s.user.department.className) ? s.user.department.className.join(' ') : (s.user.department.className || '')}`.trim()
+                                                    : 'General Batch'}
+                                            </span>
                                         </td>
                                         <td className="py-4 px-6 text-center">
                                             <div className="flex items-center justify-center gap-2">
@@ -313,10 +317,14 @@ const Students = () => {
                                         <input required className="input-field" placeholder="REG2024001" value={currentStudent.registerNumber} onChange={(e) => setCurrentStudent({ ...currentStudent, registerNumber: e.target.value.toUpperCase() })} />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Academic Division<span className="text-red-500">*</span></label>
+                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Academic Course<span className="text-red-500">*</span></label>
                                         <select required className="input-field cursor-pointer font-bold text-secondary-700" value={currentStudent.department} onChange={(e) => setCurrentStudent({ ...currentStudent, department: e.target.value })}>
-                                            <option value="">Select Portfolio</option>
-                                            {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
+                                            <option value="">Select Course</option>
+                                            {departments.map(d => (
+                                                <option key={d._id} value={d._id}>
+                                                    {`${d.name} ${Array.isArray(d.className) ? d.className.join(' ') : (d.className || '')}`.trim()}
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>
@@ -384,13 +392,17 @@ const Students = () => {
                                 <div className="space-y-6">
                                     <div className="bg-secondary-50/50 rounded-[2rem] p-8 border border-secondary-100">
                                         <div className="flex items-center gap-3 mb-4">
-                                            <div className="w-2 h-2 bg-primary-600 rounded-full animate-pulse"></div>
+                                            <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
                                             <h4 className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.2em]">Academic Matrix</h4>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-1">
-                                                <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest">Division</p>
-                                                <p className="text-sm font-bold text-secondary-900">{selectedStudent.user?.department?.name || 'General Batch'}</p>
+                                                <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest">Course</p>
+                                                <p className="text-sm font-bold text-secondary-900">
+                                                    {selectedStudent.user?.department?.name 
+                                                        ? `${selectedStudent.user.department.name} ${Array.isArray(selectedStudent.user.department.className) ? selectedStudent.user.department.className.join(' ') : (selectedStudent.user.department.className || '')}`.trim()
+                                                        : (selectedStudent.user?.department?.name || 'General Batch')}
+                                                </p>
                                             </div>
                                             <div className="space-y-1">
                                                 <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest">Entry Year</p>
@@ -429,14 +441,16 @@ const Students = () => {
                                     </div>
                                 </div>
 
-                                <div className="pt-8 border-t border-secondary-100">
-                                    <button 
-                                        onClick={() => { handleOpenModal(selectedStudent); setShowSidePanel(false); }}
-                                        className="w-full py-4 bg-secondary-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-primary-600 transition-all shadow-xl shadow-secondary-900/20 active:scale-95 flex items-center justify-center gap-3"
-                                    >
-                                        <Edit2 size={16} /> Sync Profile Node
-                                    </button>
-                                </div>
+                                {(user?.role === 'admin' || user?.role === 'teacher') && (
+                                    <div className="pt-8 border-t border-secondary-100">
+                                        <button 
+                                            onClick={() => { handleOpenModal(selectedStudent); setShowSidePanel(false); }}
+                                            className="w-full py-4 bg-secondary-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-primary-600 transition-all shadow-xl shadow-secondary-900/20 active:scale-95 flex items-center justify-center gap-3"
+                                        >
+                                            <Edit2 size={16} /> Sync Profile Node
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
                     </div>

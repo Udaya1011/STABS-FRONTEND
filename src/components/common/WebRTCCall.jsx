@@ -496,8 +496,8 @@ const WebRTCCall = () => {
                         
                         {(callState === 'ringing' || callState === 'calling') && (
                             <div className="absolute inset-0 z-0">
-                                <div className={`absolute inset-0 ${callType === 'video' ? 'bg-purple-400' : 'bg-primary-400'} rounded-[40px] animate-ping opacity-20 scale-150`}></div>
-                                <div className={`absolute inset-0 ${callType === 'video' ? 'bg-purple-400' : 'bg-primary-400'} rounded-[40px] animate-ping opacity-10 scale-[2]`}></div>
+                                <div className={`absolute inset-0 ${callType === 'video' ? 'bg-purple-400' : 'bg-primary-400'} rounded-[40px] opacity-20 scale-150`}></div>
+                                <div className={`absolute inset-0 ${callType === 'video' ? 'bg-purple-400' : 'bg-primary-400'} rounded-[40px] opacity-10 scale-[2]`}></div>
                             </div>
                         )}
                     </div>
@@ -594,7 +594,7 @@ const WebRTCCall = () => {
 
                 {/* Footer Micro-detail */}
                 <div className="mt-8 opacity-30 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 bg-secondary-900 rounded-full animate-ping"></div>
+                    <div className="w-1.5 h-1.5 bg-secondary-900 rounded-full"></div>
                     <span className="text-[9px] font-black uppercase tracking-[0.4em]">Secure RTC Encryption</span>
                 </div>
             </motion.div>

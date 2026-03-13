@@ -116,8 +116,8 @@ const Departments = () => {
                         <thead className="bg-primary-600 sticky top-0 z-10 border-b border-primary-700 shadow-sm">
                             <tr>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest w-20 text-center">#</th>
-                                <th className="py-4 px-8 text-xs font-bold text-white uppercase tracking-widest text-center">Department</th>
-                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-28">Programme</th>
+                                <th className="py-4 px-8 text-xs font-bold text-white uppercase tracking-widest text-center">Course</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-28">Year</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-24">Block</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-24">Class</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-24">Room No</th>
@@ -255,7 +255,7 @@ const Departments = () => {
                                 {/* Row 1: Department Name + Code */}
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Department Name<span className="text-red-500">*</span></label>
+                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Course Name (e.g. MCA, BCA)<span className="text-red-500">*</span></label>
                                         <input required className="input-field" placeholder="e.g. Computer Science" value={currentDep.name || ''} onChange={(e) => setCurrentDep({ ...currentDep, name: e.target.value })} />
                                     </div>
                                     <div className="space-y-2">
@@ -267,8 +267,8 @@ const Departments = () => {
                                 {/* Row 2: Programme + Block */}
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Programme</label>
-                                        <input className="input-field" placeholder="e.g. BCA, MCA, B.Tech" value={currentDep.programme || ''} onChange={(e) => setCurrentDep({ ...currentDep, programme: e.target.value })} />
+                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Academic Year (e.g. I, II, III)</label>
+                                        <input className="input-field" placeholder="e.g. I, II, III" value={currentDep.programme || ''} onChange={(e) => setCurrentDep({ ...currentDep, programme: e.target.value })} />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Block</label>
@@ -279,7 +279,7 @@ const Departments = () => {
                                 {/* Row 3: Class + Room No */}
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Class</label>
+                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Section (e.g. A, B)</label>
                                         <input className="input-field" placeholder="e.g. A, B, C" value={currentDep.className || ''} onChange={(e) => setCurrentDep({ ...currentDep, className: e.target.value })} />
                                     </div>
                                     <div className="space-y-2">
@@ -344,7 +344,7 @@ const Departments = () => {
                                 <div className="space-y-6">
                                     <div className="bg-secondary-50/50 rounded-[2rem] p-8 border border-secondary-100">
                                         <div className="flex items-center gap-3 mb-4">
-                                            <div className="w-2 h-2 bg-primary-600 rounded-full animate-pulse"></div>
+                                            <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
                                             <h4 className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.2em]">Infrastructure Specs</h4>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
@@ -356,18 +356,24 @@ const Departments = () => {
                                                 <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest">Learning Studios</p>
                                                 <p className="text-sm font-bold text-secondary-900">{selectedDep.classrooms?.join(', ') || '---'}</p>
                                             </div>
+                                            <div className="col-span-2 pt-2 space-y-1">
+                                                <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest">Academic Year</p>
+                                                <p className="text-sm font-bold text-secondary-900">{selectedDep.programme || '---'}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="pt-8 border-t border-secondary-100">
-                                    <button 
-                                        onClick={() => { handleOpenModal(selectedDep); setShowSidePanel(false); }}
-                                        className="w-full py-4 bg-secondary-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-primary-600 transition-all shadow-xl shadow-secondary-900/20 active:scale-95 flex items-center justify-center gap-3"
-                                    >
-                                        <Edit2 size={16} /> Sync Division Data
-                                    </button>
-                                </div>
+                                {user?.role === 'admin' && (
+                                    <div className="pt-8 border-t border-secondary-100">
+                                        <button 
+                                            onClick={() => { handleOpenModal(selectedDep); setShowSidePanel(false); }}
+                                            className="w-full py-4 bg-secondary-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-primary-600 transition-all shadow-xl shadow-secondary-900/20 active:scale-95 flex items-center justify-center gap-3"
+                                        >
+                                            <Edit2 size={16} /> Sync Division Data
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
                     </div>

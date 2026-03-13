@@ -128,7 +128,7 @@ const Subjects = () => {
                                 <th className="py-4 px-8 text-xs font-bold text-white uppercase tracking-widest text-center">Subject</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-28">Year</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center w-28">Sem</th>
-                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center">Programme</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center">Class</th>
                                 <th className="py-4 px-4 text-xs font-bold text-white uppercase tracking-widest text-center w-28">Actions</th>
                             </tr>
                         </thead>
@@ -172,7 +172,9 @@ const Subjects = () => {
                                         </td>
                                         <td className="py-4 px-6 text-center">
                                             <span className="text-[10px] font-black text-primary-600 tracking-wider uppercase bg-primary-50 px-3 py-1 rounded border border-primary-100 font-mono">
-                                                {sub.department?.programme || sub.department?.name || '---'}
+                                                {sub.department?.programme && sub.department?.name 
+                                                    ? `${sub.department.programme} ${sub.department.name} ${Array.isArray(sub.department.className) ? sub.department.className.join(' ') : (sub.department.className || '')}`.trim()
+                                                    : (sub.department?.name || sub.department?.code || '---')}
                                             </span>
                                         </td>
                                         <td className="py-4 px-4 text-center">
@@ -260,22 +262,24 @@ const Subjects = () => {
 
                             <form onSubmit={handleSave} className="p-8 space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Module Title<span className="text-red-500">*</span></label>
+                                    <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Subject Title<span className="text-red-500">*</span></label>
                                     <input required className="input-field" placeholder="e.g. Advanced Calculus" value={currentSubject.name} onChange={(e) => setCurrentSubject({ ...currentSubject, name: e.target.value })} />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Programme<span className="text-red-500">*</span></label>
+                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Class (Programme & Section)<span className="text-red-500">*</span></label>
                                         <select
                                             required
                                             className="input-field cursor-pointer"
                                             value={currentSubject.department}
                                             onChange={(e) => setCurrentSubject({ ...currentSubject, department: e.target.value })}
                                         >
-                                            <option value="">Select Programme</option>
+                                            <option value="">Select Class</option>
                                             {departments.map(d => (
-                                                <option key={d._id} value={d._id}>{d.programme || d.name}</option>
+                                                <option key={d._id} value={d._id}>
+                                                    {d.programme ? `${d.programme} ${d.name} ${Array.isArray(d.className) ? d.className.join(' ') : (d.className || '')}`.trim() : d.name}
+                                                </option>
                                             ))}
                                         </select>
                                     </div>
@@ -294,13 +298,13 @@ const Subjects = () => {
 
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Academic Year</label>
+                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Year</label>
                                         <select className="input-field cursor-pointer" value={currentSubject.year} onChange={(e) => setCurrentSubject({ ...currentSubject, year: parseInt(e.target.value) })}>
                                             {[1, 2, 3, 4].map(y => <option key={y} value={y}>Year {y}</option>)}
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Semester Cycle</label>
+                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Sem</label>
                                         <select className="input-field cursor-pointer" value={currentSubject.semester} onChange={(e) => setCurrentSubject({ ...currentSubject, semester: parseInt(e.target.value) })}>
                                             {[1, 2, 3, 4, 5, 6, 7, 8].map(s => <option key={s} value={s}>Sem {s}</option>)}
                                         </select>
@@ -357,7 +361,7 @@ const Subjects = () => {
                                 <div className="space-y-6">
                                     <div className="bg-secondary-50/50 rounded-[2rem] p-8 border border-secondary-100">
                                         <div className="flex items-center gap-3 mb-4">
-                                            <div className="w-2 h-2 bg-primary-600 rounded-full animate-pulse"></div>
+                                            <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
                                             <h4 className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.2em]">Module Specs</h4>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
@@ -369,18 +373,28 @@ const Subjects = () => {
                                                 <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest">Semester</p>
                                                 <p className="text-sm font-bold text-secondary-900">Period {selectedSubject.semester}</p>
                                             </div>
+                                            <div className="col-span-2 pt-2 space-y-1">
+                                                <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest">Assigned Class</p>
+                                                <p className="text-sm font-bold text-secondary-900">
+                                                    {selectedSubject.department?.programme && selectedSubject.department?.name 
+                                                        ? `${selectedSubject.department.programme} ${selectedSubject.department.name} ${Array.isArray(selectedSubject.department.className) ? selectedSubject.department.className.join(' ') : (selectedSubject.department.className || '')}`.trim()
+                                                        : (selectedSubject.department?.name || selectedSubject.department?.code || '---')}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="pt-8 border-t border-secondary-100">
-                                    <button
-                                        onClick={() => { handleOpenModal(selectedSubject); setShowSidePanel(false); }}
-                                        className="w-full py-4 bg-secondary-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-primary-600 transition-all shadow-xl shadow-secondary-900/20 active:scale-95 flex items-center justify-center gap-3"
-                                    >
-                                        <Edit2 size={16} /> Sync Module Data
-                                    </button>
-                                </div>
+                                {user?.role === 'admin' && (
+                                    <div className="pt-8 border-t border-secondary-100">
+                                        <button
+                                            onClick={() => { handleOpenModal(selectedSubject); setShowSidePanel(false); }}
+                                            className="w-full py-4 bg-secondary-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-primary-600 transition-all shadow-xl shadow-secondary-900/20 active:scale-95 flex items-center justify-center gap-3"
+                                        >
+                                            <Edit2 size={16} /> Sync Module Data
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
                     </div>

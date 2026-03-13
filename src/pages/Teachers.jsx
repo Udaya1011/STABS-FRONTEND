@@ -78,7 +78,9 @@ const Teachers = () => {
     const filteredTeachers = teachers.filter(t => {
         const matchesSearch = t.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             t.designation?.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesFilter = selectedDepId === 'all' || (t.user?.department?._id || t.user?.department) === selectedDepId;
+        const matchesFilter = selectedDepId === 'all' || 
+            (t.user?.department?._id || t.user?.department) === selectedDepId || 
+            (t.user?.department?.name === selectedDepId);
         return matchesSearch && matchesFilter;
     });
 
@@ -203,7 +205,7 @@ const Teachers = () => {
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest">Faculty</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest">Designation</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest">Email</th>
-                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center">Programme</th>
+                                <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center">Course</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-center">Mobile Number</th>
                                 <th className="py-4 px-6 text-xs font-bold text-white uppercase tracking-widest text-right">Actions</th>
                             </tr>
@@ -257,7 +259,7 @@ const Teachers = () => {
                                             <span className="text-xs font-medium text-primary-600 truncate max-w-[150px] inline-block">{teacher.user?.email}</span>
                                         </td>
                                         <td className="py-4 px-6 text-center">
-                                            <span className="text-xs font-bold text-secondary-700">{teacher.user?.department?.programme || teacher.user?.department?.name || 'General Portfolio'}</span>
+                                            <span className="text-xs font-bold text-secondary-700">{teacher.user?.department?.name || teacher.user?.department?.programme || 'General Portfolio'}</span>
                                         </td>
                                         <td className="py-4 px-6 text-center">
                                             <span className="inline-flex items-center px-2 py-1 rounded-lg bg-primary-50 text-primary-600 text-[10px] font-bold uppercase tracking-widest border border-primary-100 mr-2">
@@ -370,10 +372,10 @@ const Teachers = () => {
                                         <input className="input-field uppercase" placeholder="Professor" value={currentTeacher.designation} onChange={(e) => setCurrentTeacher({ ...currentTeacher, designation: e.target.value.toUpperCase() })} />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Programme<span className="text-red-500">*</span></label>
+                                        <label className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest ml-1">Course<span className="text-red-500">*</span></label>
                                         <select required className="input-field cursor-pointer font-bold text-secondary-700" value={currentTeacher.department} onChange={(e) => setCurrentTeacher({ ...currentTeacher, department: e.target.value })}>
-                                            <option value="">Select Programme</option>
-                                            {departments.map(d => <option key={d._id} value={d._id}>{d.programme || d.name}</option>)}
+                                            <option value="">Select Course</option>
+                                            {departments.map(d => <option key={d._id} value={d._id}>{d.name} ({d.programme})</option>)}
                                         </select>
                                     </div>
                                 </div>
@@ -475,7 +477,7 @@ const Teachers = () => {
                                 <div className="space-y-4">
                                     <div className="bg-secondary-50/50 rounded-[1.5rem] p-5 border border-secondary-100">
                                         <div className="flex items-center gap-2 mb-3">
-                                            <div className="w-1.5 h-1.5 bg-[#800000] rounded-full animate-pulse"></div>
+                                            <div className="w-1.5 h-1.5 bg-[#800000] rounded-full"></div>
                                             <h4 className="text-[9px] font-black text-secondary-400 uppercase tracking-[0.2em]">Professional Matrix</h4>
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
@@ -514,6 +516,7 @@ const Teachers = () => {
                                         </div>
                                     </div>
 
+                                {user?.role === 'admin' && (
                                     <div className="pt-8 space-y-4">
                                         <button 
                                             onClick={() => { handleOpenTimetableModal(selectedTeacher); setShowSidePanel(false); }}
@@ -528,6 +531,7 @@ const Teachers = () => {
                                             <Edit2 size={16} /> Sync Profile Node
                                         </button>
                                     </div>
+                                )}
                                 </div>
                             </div>
                         </motion.div>

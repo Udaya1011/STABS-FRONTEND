@@ -115,6 +115,15 @@ export const authSlice = createSlice({
             state.isError = false;
             state.message = '';
         },
+        updateUserLocally: (state, action) => {
+            if (state.user && action.payload && action.payload.token) {
+                 state.user = action.payload;
+                 localStorage.setItem('user', JSON.stringify(state.user));
+            } else if (state.user && action.payload) {
+                 state.user = { ...state.user, ...action.payload };
+                 localStorage.setItem('user', JSON.stringify(state.user));
+            }
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -191,5 +200,5 @@ export const authSlice = createSlice({
     },
 });
 
-export const { reset } = authSlice.actions;
+export const { reset, updateUserLocally } = authSlice.actions;
 export default authSlice.reducer;

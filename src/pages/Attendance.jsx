@@ -34,7 +34,7 @@ const Attendance = () => {
     const { students: allStudents, isLoading: studentsLoading } = useSelector((state) => state.students);
     const { isLoading: attendanceLoading, isSuccess, isError, message, studentHistory, subjectHistory } = useSelector((state) => state.attendance);
 
-    const [selectedDepartment, setSelectedDepartment] = useState('');
+    const [selectedClass, setSelectedClass] = useState('');
     const [selectedYear, setSelectedYear] = useState('');
     const [selectedSemester, setSelectedSemester] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
@@ -49,17 +49,17 @@ const Attendance = () => {
     // Clear dependent states when high-level config changes
     useEffect(() => {
         setSelectedSubject('');
-    }, [selectedDepartment, selectedYear, selectedSemester]);
+    }, [selectedClass, selectedYear, selectedSemester]);
 
     useEffect(() => {
         console.log('--- Attendance State Log ---');
         console.log('View:', viewMode);
-        console.log('Selection:', { selectedDepartment, selectedYear, selectedSemester, selectedSubject });
-    }, [viewMode, selectedDepartment, selectedYear, selectedSemester, selectedSubject]);
+        console.log('Selection:', { selectedClass, selectedYear, selectedSemester, selectedSubject });
+    }, [viewMode, selectedClass, selectedYear, selectedSemester, selectedSubject]);
 
     const filteredSubjects = subjects.filter(sub => {
         const depId = sub.department?._id || sub.department;
-        const depMatch = !selectedDepartment || depId === selectedDepartment;
+        const depMatch = !selectedClass || depId === selectedClass;
         const semMatch = !selectedSemester || String(sub.semester) === String(selectedSemester);
         const yearMatch = !selectedYear || String(sub.year) === String(selectedYear);
         return depMatch && semMatch && yearMatch;
@@ -85,10 +85,10 @@ const Attendance = () => {
     useEffect(() => {
         if (selectedSubject && isAuthorized) {
             const queryParts = [`subjectId=${selectedSubject}`];
-            if (selectedDepartment) queryParts.push(`department=${selectedDepartment}`);
+            if (selectedClass) queryParts.push(`department=${selectedClass}`);
             if (selectedYear) queryParts.push(`year=${selectedYear}`);
             if (selectedSemester) queryParts.push(`semester=${selectedSemester}`);
-            
+
             const fullQuery = queryParts.join('&');
             console.log('Dispatching getStudents with query:', fullQuery);
             dispatch(getStudents(fullQuery));
@@ -96,7 +96,7 @@ const Attendance = () => {
             console.log('Clearing selection or unauthorized - ignoring student fetch');
             setAttendanceList([]);
         }
-    }, [dispatch, selectedSubject, isAuthorized, selectedDepartment, selectedYear, selectedSemester]);
+    }, [dispatch, selectedSubject, isAuthorized, selectedClass, selectedYear, selectedSemester]);
 
     // Fetch history when subject changes or viewMode changes
     useEffect(() => {
@@ -144,8 +144,8 @@ const Attendance = () => {
     }, [allStudents, selectedSubject, studentsLoading]);
 
     const handleStatusToggle = (studentId, status) => {
-        setAttendanceList(prev => prev.map(item => 
-            item.studentId === studentId 
+        setAttendanceList(prev => prev.map(item =>
+            item.studentId === studentId
                 ? { ...item, status }
                 : item
         ));
@@ -171,7 +171,7 @@ const Attendance = () => {
         dispatch(submitAttendance(data));
     };
 
-    const filteredList = attendanceList.filter(item => 
+    const filteredList = attendanceList.filter(item =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.registerNumber.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -190,8 +190,8 @@ const Attendance = () => {
                         <p className="text-secondary-500 font-medium">Monitoring your engagement across all modules</p>
                     </div>
                     <div className="bg-white px-6 py-3 rounded-2xl border border-secondary-100 shadow-sm">
-                         <span className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.2em] block mb-1">Registration Node</span>
-                         <span className="text-lg font-black text-primary-600 font-mono">{user?.registerNumber || 'UNASSIGNED'}</span>
+                        <span className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.2em] block mb-1">Registration Node</span>
+                        <span className="text-lg font-black text-primary-600 font-mono">{user?.registerNumber || 'UNASSIGNED'}</span>
                     </div>
                 </div>
 
@@ -224,7 +224,7 @@ const Attendance = () => {
                                         </span>
                                     </div>
                                     <div className="h-2 w-full bg-secondary-100 rounded-full overflow-hidden">
-                                        <motion.div 
+                                        <motion.div
                                             initial={{ width: 0 }}
                                             animate={{ width: `${item.percentage}%` }}
                                             transition={{ duration: 1, delay: idx * 0.1 }}
@@ -280,16 +280,15 @@ const Attendance = () => {
                                         </td>
                                         <td className="px-8 py-5">
                                             <div className="flex items-center gap-3">
-                                                 <div className="w-8 h-8 rounded-lg bg-secondary-100 flex items-center justify-center text-[10px] font-black text-secondary-500">
-                                                     {record.faculty?.name?.charAt(0)}
-                                                 </div>
-                                                 <span className="text-sm font-bold text-secondary-600">{record.faculty?.name}</span>
+                                                <div className="w-8 h-8 rounded-lg bg-secondary-100 flex items-center justify-center text-[10px] font-black text-secondary-500">
+                                                    {record.faculty?.name?.charAt(0)}
+                                                </div>
+                                                <span className="text-sm font-bold text-secondary-600">{record.faculty?.name}</span>
                                             </div>
                                         </td>
                                         <td className="px-8 py-5">
-                                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                                record.status === 'Present' ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-red-100 text-red-600 border border-red-200'
-                                            }`}>
+                                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${record.status === 'Present' ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-red-100 text-red-600 border border-red-200'
+                                                }`}>
                                                 {record.status}
                                             </span>
                                         </td>
@@ -323,21 +322,19 @@ const Attendance = () => {
                     <h1 className="text-3xl font-black text-secondary-900 tracking-tight font-display">Manage Attendance</h1>
                     <p className="text-secondary-500 font-medium">Record and track student participation</p>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
-                    <button 
+                    <button
                         onClick={() => setViewMode('mark')}
-                        className={`px-5 py-2.5 rounded-2xl font-bold transition-all ${
-                            viewMode === 'mark' ? 'bg-primary-600 text-white shadow-lg' : 'bg-white text-secondary-600 border border-secondary-100'
-                        }`}
+                        className={`px-5 py-2.5 rounded-2xl font-bold transition-all ${viewMode === 'mark' ? 'bg-primary-600 text-white shadow-lg' : 'bg-white text-secondary-600 border border-secondary-100'
+                            }`}
                     >
                         Mark New
                     </button>
-                    <button 
-                         onClick={() => setViewMode('history')}
-                         className={`px-5 py-2.5 rounded-2xl font-bold transition-all ${
-                             viewMode === 'history' ? 'bg-primary-600 text-white shadow-lg' : 'bg-white text-secondary-600 border border-secondary-100'
-                         }`}
+                    <button
+                        onClick={() => setViewMode('history')}
+                        className={`px-5 py-2.5 rounded-2xl font-bold transition-all ${viewMode === 'history' ? 'bg-primary-600 text-white shadow-lg' : 'bg-white text-secondary-600 border border-secondary-100'
+                            }`}
                     >
                         View History
                     </button>
@@ -359,63 +356,21 @@ const Attendance = () => {
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                            {/* Academic Scope */}
+                            {/* Class & Subject */}
                             <div className="space-y-6">
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Academic Year</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {[1, 2, 3, 4].map(year => (
-                                            <button 
-                                                key={year}
-                                                onClick={() => setSelectedYear(String(year))}
-                                                className={`px-6 py-2.5 rounded-xl font-bold transition-all border-2 ${
-                                                    selectedYear === String(year) 
-                                                    ? 'bg-primary-600 border-primary-600 text-white shadow-lg' 
-                                                    : 'bg-white border-secondary-50 text-secondary-400 hover:border-primary-200 hover:text-primary-600'
-                                                }`}
-                                            >
-                                                Year {year}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Semester Cycle</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
-                                            <button 
-                                                key={sem}
-                                                onClick={() => setSelectedSemester(String(sem))}
-                                                className={`w-11 h-11 rounded-xl font-black transition-all border-2 text-sm ${
-                                                    selectedSemester === String(sem) 
-                                                    ? 'bg-primary-600 border-primary-600 text-white shadow-lg' 
-                                                    : 'bg-white border-secondary-50 text-secondary-400 hover:border-primary-200'
-                                                }`}
-                                            >
-                                                {sem}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Department & Subject */}
-                            <div className="space-y-6">
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Department</label>
+                                    <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Class</label>
                                     <div className="grid grid-cols-2 gap-2">
                                         {departments.map((dep) => (
                                             <button
                                                 key={dep._id}
-                                                onClick={() => setSelectedDepartment(dep._id)}
-                                                className={`px-4 py-3 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all border-2 text-center ${
-                                                    selectedDepartment === dep._id
-                                                        ? 'bg-secondary-900 border-secondary-900 text-white shadow-xl'
+                                                onClick={() => setSelectedClass(dep._id)}
+                                                className={`px-4 py-3 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all border-2 text-center ${selectedClass === dep._id
+                                                        ? 'bg-secondary-900 border-secondary-900 text-white shadow-xl scale-[1.05]'
                                                         : 'bg-white border-secondary-50 text-secondary-400 hover:border-secondary-100'
-                                                }`}
+                                                    }`}
                                             >
-                                                {dep.programme || dep.name}
+                                                {dep.programme ? `${dep.programme} ${dep.name} ${Array.isArray(dep.className) ? dep.className.join(' ') : (dep.className || '')}`.trim() : dep.name}
                                             </button>
                                         ))}
                                     </div>
@@ -439,13 +394,52 @@ const Attendance = () => {
                                 </div>
                             </div>
 
+                            {/* Academic Scope */}
+                            <div className="space-y-6">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Academic Year</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[1, 2, 3, 4].map(year => (
+                                            <button
+                                                key={year}
+                                                onClick={() => setSelectedYear(String(year))}
+                                                className={`px-6 py-2.5 rounded-xl font-bold transition-all border-2 ${selectedYear === String(year)
+                                                        ? 'bg-primary-600 border-primary-600 text-white shadow-lg'
+                                                        : 'bg-white border-secondary-50 text-secondary-400 hover:border-primary-200 hover:text-primary-600'
+                                                    }`}
+                                            >
+                                                Year {year}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Semester Cycle</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                                            <button
+                                                key={sem}
+                                                onClick={() => setSelectedSemester(String(sem))}
+                                                className={`w-11 h-11 rounded-xl font-black transition-all border-2 text-sm ${selectedSemester === String(sem)
+                                                        ? 'bg-primary-600 border-primary-600 text-white shadow-lg'
+                                                        : 'bg-white border-secondary-50 text-secondary-400 hover:border-primary-200'
+                                                    }`}
+                                            >
+                                                {sem}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Date & Slot */}
                             <div className="space-y-6">
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Session Date</label>
                                     <div className="relative">
                                         <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400" size={18} />
-                                        <input 
+                                        <input
                                             type="date"
                                             value={date}
                                             onChange={(e) => setDate(e.target.value)}
@@ -494,8 +488,8 @@ const Attendance = () => {
                                     <button onClick={() => markAll('Present')} className="px-5 py-2.5 bg-green-50 text-green-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-100 transition-all">Mark All Present</button>
                                     <button onClick={() => markAll('Absent')} className="px-5 py-2.5 bg-red-50 text-red-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all">Mark All Absent</button>
                                     <div className="w-px h-10 bg-secondary-100 mx-2"></div>
-                                    <button 
-                                        onClick={handleSubmit} 
+                                    <button
+                                        onClick={handleSubmit}
                                         disabled={attendanceLoading}
                                         className="px-8 py-3 bg-primary-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] shadow-xl shadow-primary-500/30 hover:bg-primary-700 transition-all flex items-center gap-2"
                                     >
@@ -548,8 +542,8 @@ const Attendance = () => {
                                                 </tr>
                                             ) : filteredList.length > 0 ? (
                                                 filteredList.map((student) => (
-                                                    <tr 
-                                                        key={student.studentId} 
+                                                    <tr
+                                                        key={student.studentId}
                                                         className="group hover:bg-primary-50/30 transition-all"
                                                     >
                                                         <td className="px-10 py-5">
@@ -569,22 +563,20 @@ const Attendance = () => {
                                                             <div className="flex justify-center gap-3">
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); handleStatusToggle(student.studentId, 'Present'); }}
-                                                                    className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all border-2 ${
-                                                                        student.status === 'Present' 
-                                                                        ? 'bg-green-500 text-white border-green-600 shadow-lg shadow-green-500/30' 
-                                                                        : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
-                                                                    }`}
+                                                                    className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all border-2 ${student.status === 'Present'
+                                                                            ? 'bg-green-500 text-white border-green-600 shadow-lg shadow-green-500/30'
+                                                                            : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                                                                        }`}
                                                                 >
                                                                     <CheckCircle2 size={14} />
                                                                     Present
                                                                 </button>
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); handleStatusToggle(student.studentId, 'Absent'); }}
-                                                                    className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all border-2 ${
-                                                                        student.status === 'Absent' 
-                                                                        ? 'bg-red-500 text-white border-red-600 shadow-lg shadow-red-500/30' 
-                                                                        : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
-                                                                    }`}
+                                                                    className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all border-2 ${student.status === 'Absent'
+                                                                            ? 'bg-red-500 text-white border-red-600 shadow-lg shadow-red-500/30'
+                                                                            : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                                                                        }`}
                                                                 >
                                                                     <XCircle size={14} />
                                                                     Absent
@@ -613,9 +605,9 @@ const Attendance = () => {
             ) : (
                 <div className="space-y-6">
                     <div className="glass-premium p-5 rounded-[2rem] bg-white border border-secondary-100 shadow-sm flex items-center justify-between">
-                         <div className="flex items-center gap-4">
-                             <BookOpen className="text-primary-600" size={24} />
-                             <select
+                        <div className="flex items-center gap-4">
+                            <BookOpen className="text-primary-600" size={24} />
+                            <select
                                 value={selectedSubject}
                                 onChange={(e) => setSelectedSubject(e.target.value)}
                                 className="bg-transparent border-none font-bold text-secondary-900 focus:ring-0 cursor-pointer text-lg"
@@ -625,7 +617,7 @@ const Attendance = () => {
                                     <option key={subject._id} value={subject._id}>{subject.name} ({subject.code})</option>
                                 ))}
                             </select>
-                         </div>
+                        </div>
                     </div>
 
                     <div className="glass-premium rounded-[2.5rem] bg-white border border-secondary-100 shadow-premium overflow-hidden">
@@ -647,7 +639,7 @@ const Attendance = () => {
                                             const total = record.students?.length || 0;
                                             const present = record.students?.filter(s => s.status === 'Present').length || 0;
                                             const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-                                            
+
                                             return (
                                                 <tr key={record._id} className="hover:bg-secondary-50/30 transition-colors group">
                                                     <td className="px-8 py-5 font-bold text-secondary-900">
@@ -670,11 +662,10 @@ const Attendance = () => {
                                                     <td className="px-8 py-5">
                                                         <div className="flex items-center gap-3">
                                                             <div className="flex-1 w-24 h-2 bg-secondary-100 rounded-full overflow-hidden">
-                                                                <div 
-                                                                    className={`h-full rounded-full transition-all duration-1000 ${
-                                                                        percentage > 75 ? 'bg-green-500' : 
-                                                                        percentage > 50 ? 'bg-amber-500' : 'bg-red-500'
-                                                                    }`} 
+                                                                <div
+                                                                    className={`h-full rounded-full transition-all duration-1000 ${percentage > 75 ? 'bg-green-500' :
+                                                                            percentage > 50 ? 'bg-amber-500' : 'bg-red-500'
+                                                                        }`}
                                                                     style={{ width: `${percentage}%` }}
                                                                 />
                                                             </div>
@@ -682,7 +673,7 @@ const Attendance = () => {
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-5 text-right">
-                                                        <button 
+                                                        <button
                                                             onClick={() => {
                                                                 setSelectedDetailRecord(record);
                                                                 setShowDetailModal(true);
@@ -767,11 +758,10 @@ const Attendance = () => {
                                                 <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest">{item.student?.registerNumber}</p>
                                             </div>
                                         </div>
-                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                            item.status === 'Present' 
-                                            ? 'bg-green-100 text-green-700 border border-green-200' 
-                                            : 'bg-red-100 text-red-700 border border-red-200'
-                                        }`}>
+                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${item.status === 'Present'
+                                                ? 'bg-green-100 text-green-700 border border-green-200'
+                                                : 'bg-red-100 text-red-700 border border-red-200'
+                                            }`}>
                                             {item.status}
                                         </span>
                                     </div>

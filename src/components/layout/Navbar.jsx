@@ -113,7 +113,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                         <div className="relative">
                             <button
                                 onClick={() => setShowDeptStats(!showDeptStats)}
-                                className={`p-2 rounded-xl transition-all ${showDeptStats ? 'bg-primary-50 text-primary-600 ring-4 ring-primary-500/5' : 'text-secondary-500 hover:bg-secondary-50 border border-transparent'}`}
+                                className={`p-2 rounded-xl transition-all ${showDeptStats ? 'bg-primary-50 text-primary-600' : 'text-secondary-500 hover:bg-secondary-50 border border-transparent'}`}
                                 title="Department Statistics"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bar-chart-2"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
@@ -158,7 +158,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                              <div className="relative">
                                 <button
                                     onClick={() => setActiveDropdown(activeDropdown === 'sem' ? null : 'sem')}
-                                    className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeDropdown === 'sem' ? 'border-primary-600 bg-primary-50 text-primary-600 shadow-sm' : 'border-primary-100 bg-secondary-50 text-secondary-600 hover:bg-primary-50 hover:border-primary-300'}`}
+                                    className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeDropdown === 'sem' ? 'border-primary-600 bg-primary-50 text-primary-600' : 'border-primary-100 bg-secondary-50 text-secondary-600 hover:bg-primary-50 hover:border-primary-300'}`}
                                 >
                                     <span>Sems: {selectedFilters.sem === 'all' ? 'All' : selectedFilters.sem}</span>
                                     <motion.div animate={{ rotate: activeDropdown === 'sem' ? 180 : 0 }}>
@@ -189,7 +189,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                             <div className="relative">
                                 <button
                                     onClick={() => setActiveDropdown(activeDropdown === 'year' ? null : 'year')}
-                                    className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeDropdown === 'year' ? 'border-primary-600 bg-primary-50 text-primary-600 shadow-sm' : 'border-primary-100 bg-secondary-50 text-secondary-600 hover:bg-primary-50 hover:border-primary-300'}`}
+                                    className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeDropdown === 'year' ? 'border-primary-600 bg-primary-50 text-primary-600' : 'border-primary-100 bg-secondary-50 text-secondary-600 hover:bg-primary-50 hover:border-primary-300'}`}
                                 >
                                     <span>Year: {selectedFilters.year === 'all' ? 'All' : selectedFilters.year}</span>
                                     <motion.div animate={{ rotate: activeDropdown === 'year' ? 180 : 0 }}>
@@ -222,9 +222,15 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                         <div className="relative">
                             <button
                                 onClick={() => setActiveDropdown(activeDropdown === 'dept' ? null : 'dept')}
-                                className={`px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 min-w-[140px] justify-between ${activeDropdown === 'dept' ? 'border-primary-600 bg-primary-50 text-primary-600 shadow-sm' : 'border-primary-100 bg-secondary-50 text-secondary-600 hover:bg-primary-50 hover:border-primary-300'}`}
+                                className={`px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 min-w-[140px] justify-between ${activeDropdown === 'dept' ? 'border-primary-600 bg-primary-50 text-primary-600' : 'border-primary-100 bg-secondary-50 text-secondary-600 hover:bg-primary-50 hover:border-primary-300'}`}
                             >
-                                <span>{selectedFilters.dept === 'all' ? 'Programme: All' : (departments.find(d => d._id === selectedFilters.dept)?.programme || departments.find(d => d._id === selectedFilters.dept)?.name || 'Programme')}</span>
+                                <span>{selectedFilters.dept === 'all' ? 'Course: All' : (
+                                    location.pathname.startsWith('/teachers') ? selectedFilters.dept : (
+                                        departments.find(d => d._id === selectedFilters.dept) 
+                                        ? `${departments.find(d => d._id === selectedFilters.dept).name} ${Array.isArray(departments.find(d => d._id === selectedFilters.dept).className) ? departments.find(d => d._id === selectedFilters.dept).className.join(' ') : (departments.find(d => d._id === selectedFilters.dept).className || '')}`.trim()
+                                        : 'Selection'
+                                    )
+                                )}</span>
                                 <motion.div animate={{ rotate: activeDropdown === 'dept' ? 180 : 0 }}>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                                 </motion.div>
@@ -239,10 +245,22 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                             className="absolute top-full mt-2 left-0 w-48 bg-white rounded-2xl shadow-2xl border border-secondary-100 overflow-hidden z-50 p-1.5"
                                         >
-                                            <button onClick={() => { setSelectedFilters({...selectedFilters, dept: 'all'}); window.dispatchEvent(new CustomEvent('department-filter', { detail: 'all' })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">All Programmes</button>
-                                            {departments?.map(dep => (
-                                                <button key={dep._id} onClick={() => { setSelectedFilters({...selectedFilters, dept: dep._id}); window.dispatchEvent(new CustomEvent('department-filter', { detail: dep._id })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">{dep.programme || dep.name}</button>
-                                            ))}
+                                            <button onClick={() => { setSelectedFilters({...selectedFilters, dept: 'all'}); window.dispatchEvent(new CustomEvent('department-filter', { detail: 'all' })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">
+                                                {location.pathname.startsWith('/teachers') ? 'All Courses' : 'All Divisions'}
+                                            </button>
+                                            {location.pathname.startsWith('/teachers') ? (
+                                                [...new Set(departments?.map(d => d.name))].filter(Boolean).sort().map(courseName => (
+                                                    <button key={courseName} onClick={() => { setSelectedFilters({...selectedFilters, dept: courseName}); window.dispatchEvent(new CustomEvent('department-filter', { detail: courseName })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">
+                                                        {courseName}
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                departments?.map(dep => (
+                                                    <button key={dep._id} onClick={() => { setSelectedFilters({...selectedFilters, dept: dep._id}); window.dispatchEvent(new CustomEvent('department-filter', { detail: dep._id })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">
+                                                        {dep.programme ? `${dep.programme} ${dep.name} ${Array.isArray(dep.className) ? dep.className.join(' ') : (dep.className || '')}`.trim() : dep.name}
+                                                    </button>
+                                                ))
+                                            )}
                                         </motion.div>
                                     </>
                                 )}
@@ -252,13 +270,13 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
 
 
 
-                    {user?.role === 'admin' && !['Dashboard', 'My Profile', 'Messages'].includes(getPageInfo().title) && (
+                    {(user?.role === 'admin' || (['teacher', 'staff'].includes(user?.role) && getPageInfo().title === 'Resources')) && !['Dashboard', 'My Profile', 'Messages'].includes(getPageInfo().title) && (
                         <button
                             onClick={() => window.dispatchEvent(new CustomEvent('open-add-modal'))}
                             className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white hover:bg-primary-700 font-bold text-sm tracking-wide rounded-xl transition-colors shadow-sm whitespace-nowrap"
                         >
                             <Plus size={18} strokeWidth={2.5} />
-                            Add {getPageInfo().title.replace(/s$/, '').replace(/ies$/, 'y')}
+                            {getPageInfo().title === 'Resources' ? 'Publish Resource' : `Add ${getPageInfo().title.replace(/s$/, '').replace(/ies$/, 'y')}`}
                         </button>
                     )}
                 </div>
@@ -270,11 +288,11 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                     <div className="relative">
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
-                            className={`p-2 rounded-xl transition-all ${showNotifications ? 'bg-primary-50 text-primary-600 ring-4 ring-primary-500/5' : 'text-secondary-500 hover:bg-secondary-50 border border-transparent'}`}
+                            className={`p-2 rounded-xl transition-all ${showNotifications ? 'bg-primary-50 text-primary-600' : 'text-secondary-500 hover:bg-secondary-50 border border-transparent'}`}
                         >
                             <Bell size={20} />
                             {totalUnread > 0 && (
-                                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-primary-600 text-white text-[9px] font-black border-2 border-white rounded-full flex items-center justify-center animate-bounce">
+                                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-primary-600 text-white text-[9px] font-black border-2 border-white rounded-full flex items-center justify-center">
                                     {totalUnread}
                                 </span>
                             )}
@@ -349,7 +367,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex justify-between items-start gap-2">
                                                                     <p className="text-[11px] font-bold text-secondary-800 leading-tight line-clamp-2">{n.message}</p>
-                                                                    {!n.isRead && <div className="w-2 h-2 bg-primary-600 rounded-full flex-shrink-0 animate-pulse mt-1"></div>}
+                                                                     {!n.isRead && <div className="w-2 h-2 bg-primary-600 rounded-full flex-shrink-0 mt-1"></div>}
                                                                 </div>
                                                                 <div className="flex items-center gap-1.5 mt-1">
                                                                     <Clock size={10} className="text-secondary-300" />

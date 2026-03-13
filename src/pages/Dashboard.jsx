@@ -33,6 +33,8 @@ import { getDepartments } from '../store/slices/departmentSlice';
 import { getMyAppointments, updateAppointmentStatus } from '../store/slices/appointmentSlice';
 import { getStudentAttendance } from '../store/slices/attendanceSlice';
 import { toast } from 'react-hot-toast';
+import CalendarComponent from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 
 const Dashboard = () => {
     const dispatch = useDispatch();
@@ -47,6 +49,9 @@ const Dashboard = () => {
     const [showTimetableModal, setShowTimetableModal] = useState(false);
     const [statsModal, setStatsModal] = useState({ isOpen: false, type: null, title: '' });
     const [timetable, setTimetable] = useState([]);
+    const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
+    const [showDateTimetable, setShowDateTimetable] = useState(false);
+    const [daySchedule, setDaySchedule] = useState([]);
 
     const generateEmptySchedule = () => {
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -128,13 +133,19 @@ const Dashboard = () => {
         { id: 'students', name: 'Active Students', value: students.length, icon: GraduationCap, color: 'text-primary-600', bgColor: 'bg-primary-50', trend: 'Live', trendUp: true, data: students, roles: ['admin', 'teacher'] },
         { id: 'teachers', name: 'Faculty Staff', value: teachers.length, icon: Users, color: 'text-accent-purple', bgColor: 'bg-purple-50', trend: 'Verified', trendUp: true, data: teachers, roles: ['admin', 'student', 'teacher'] },
         { id: 'subjects', name: 'Active Subjects', value: subjects.length, icon: BookOpen, color: 'text-accent-blue', bgColor: 'bg-blue-50', trend: 'Synced', trendUp: true, roles: ['admin', 'student', 'teacher'], data: subjects },
-        { id: 'departments', name: 'Programmes', value: departments.length, icon: Building2, color: 'text-amber-600', bgColor: 'bg-amber-50', trend: 'Global', trendUp: true, roles: ['admin', 'student', 'teacher'], data: departments },
+        { id: 'departments', name: 'Courses', value: departments.length, icon: Building2, color: 'text-amber-600', bgColor: 'bg-amber-50', trend: 'Global', trendUp: true, roles: ['admin', 'student', 'teacher'], data: departments },
     ].filter(stat => !stat.roles || stat.roles.includes(user?.role));
 
     const upcomingAppointments = [...appointments]
-        .filter(a => a.status === 'pending' || a.status === 'approved')
+        .filter(a => {
+            const appointmentDate = new Date(a.date);
+            appointmentDate.setHours(0, 0, 0, 0);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return (a.status === 'pending' || a.status === 'approved') && appointmentDate >= today;
+        })
         .sort((a, b) => new Date(a.date) - new Date(b.date))
-        .slice(0, 3);
+        .slice(0, 5);
 
     const handleUpdateStatus = (id, status) => {
         dispatch(updateAppointmentStatus({ id, statusData: { status } }))
@@ -159,92 +170,160 @@ const Dashboard = () => {
         return { total, present, percentage };
     })();
 
+    const handleDateClick = (date) => {
+        if (user?.role !== 'student' && user?.role !== 'teacher') return;
+
+        const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
+        if (dayName === 'Sunday') {
+            toast.error('Academic node is offline on Sundays');
+            return;
+        }
+
+        const schedule = [null, null, null, null, null, null];
+
+        if (user.role === 'student') {
+            const studentDeptId = (user?.department?._id || user?.department || '').toString();
+            const studentSem = user?.semester;
+
+            teachers.forEach(teacher => {
+                const availability = teacher.availability || teacher.user?.availability || [];
+                // Case-insensitive Day Matching for robustness
+                const dayData = availability.find(d => d.day?.trim().toLowerCase() === dayName.toLowerCase());
+                
+                if (dayData) {
+                    dayData.slots.forEach((slot, index) => {
+                        const slotSubjectId = (slot.subject?._id || slot.subject || '').toString();
+                        if (slotSubjectId) {
+                            const sub = subjects.find(s => s._id.toString() === slotSubjectId);
+                            if (sub) {
+                                const subDeptId = (sub.department?._id || sub.department || '').toString();
+                                
+                                // Robust matching
+                                const deptMatch = subDeptId === studentDeptId;
+                                // Loose equality for semester (string vs number)
+                                const semMatch = !studentSem || !sub.semester || String(sub.semester) === String(studentSem);
+                                
+                                if (deptMatch && semMatch) {
+                                    schedule[index] = {
+                                        subject: sub.name,
+                                        teacher: teacher.user?.name || teacher.name,
+                                        time: `${slot.start} - ${slot.end}`,
+                                        department: sub.department?.name || 'Department'
+                                    };
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        } else if (user.role === 'teacher') {
+            const availability = currentTeacherProfile?.availability || user?.availability || [];
+            const dayData = availability.find(d => d.day === dayName);
+            if (dayData) {
+                dayData.slots.forEach((slot, index) => {
+                    if (slot.subject) {
+                        const sub = subjects.find(s => s._id === (slot.subject?._id || slot.subject));
+                        schedule[index] = {
+                            subject: sub?.name || 'Class Session',
+                            time: `${slot.start} - ${slot.end}`,
+                            department: sub?.department?.name || 'Assigned Division'
+                        };
+                    }
+                });
+            }
+        }
+
+        setSelectedCalendarDate(date);
+        setDaySchedule(schedule);
+        setShowDateTimetable(true);
+    };
+
     return (
         <div className="max-w-[1600px] mx-auto space-y-10 pb-20 px-2 lg:px-4">
             {/* Header Section - TRIPARTITE LAYOUT (LEFT, CENTER, RIGHT) */}
             <div className="grid grid-cols-1 xl:grid-cols-3 items-center gap-8 border-b border-secondary-100 pb-10">
 
-                    {/* 1. LEFT: Greeting & Role Node */}
-                    <motion.div
-                        initial={{ opacity: 0, x: -30 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex flex-col items-start gap-1"
-                    >
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="px-3 py-1 bg-secondary-900 rounded-xl border border-black shadow-2xl">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-pulse"></div>
-                                    <span className="text-[10px] font-black text-white uppercase tracking-[0.25em] whitespace-nowrap">
-                                        {user?.role} NODE
-                                    </span>
-                                </div>
+                {/* 1. LEFT: Greeting & Role Node */}
+                <motion.div
+                    initial={{ opacity: 0, x: -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex flex-col items-start gap-1"
+                >
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="px-3 py-1 bg-secondary-900 rounded-xl border border-black shadow-2xl">
+                            <div className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
+                                <span className="text-[10px] font-black text-white uppercase tracking-[0.25em] whitespace-nowrap">
+                                    {user?.role} NODE
+                                </span>
                             </div>
-                            <span className="h-4 w-[1px] bg-secondary-200"></span>
-                            <span className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest leading-none">Status: Online</span>
                         </div>
-                        <h1 className="text-4xl font-black text-secondary-900 tracking-tighter leading-tight">
-                            {getGreeting()},<br />
-                            <span className="text-primary-600">{user?.name?.split(' ')[0]}</span>
-                        </h1>
-                    </motion.div>
-
-                    {/* 2. CENTER: Micro Stat Cards */}
-                    <div className="flex justify-center items-center">
-                        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2">
-                            {stats.map((stat, idx) => (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.2 + (idx * 0.1) }}
-                                    key={stat.id}
-                                    onClick={() => setStatsModal({ isOpen: true, type: stat.id, title: stat.name, data: stat.data })}
-                                    className="px-5 py-3 bg-white rounded-2xl border border-secondary-100 shadow-sm hover:border-primary-600 hover:shadow-xl hover:shadow-primary-500/5 transition-all cursor-pointer group flex items-center gap-4 min-w-[130px] shrink-0"
-                                >
-                                    <div className={`${stat.bgColor} ${stat.color} p-2.5 rounded-xl group-hover:bg-primary-600 group-hover:text-white transition-all transform group-hover:rotate-12`}>
-                                        <stat.icon size={16} />
-                                    </div>
-                                    <div className="leading-tight">
-                                        <p className="text-[8px] font-black text-secondary-400 uppercase tracking-[0.2em] mb-1">{stat.name.split(' ')[1] || stat.name}</p>
-                                        <p className="text-lg font-black text-secondary-900 tracking-tight">{stat.value}</p>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
+                        <span className="h-4 w-[1px] bg-secondary-200"></span>
+                        <span className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest leading-none">Status: Online</span>
                     </div>
+                    <h1 className="text-4xl font-black text-secondary-900 tracking-tighter leading-tight">
+                        {getGreeting()},<br />
+                        <span className="text-primary-600">{user?.name?.split(' ')[0]}</span>
+                    </h1>
+                </motion.div>
 
-                    {/* 3. RIGHT: Rapid Action Hub */}
-                    <div className="flex items-center justify-end gap-3 shrink-0">
-                        <div className="h-10 w-[1px] bg-secondary-100 mx-4 hidden xl:block"></div>
-
-                        {user?.role === 'teacher' && (
-                            <button
-                                onClick={() => navigate('/attendance')}
-                                className="group bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.25em] flex items-center gap-3 shadow-[0_15px_30px_-5px_rgba(235,50,50,0.3)] active:scale-95 transition-all"
+                {/* 2. CENTER: Micro Stat Cards */}
+                <div className="flex justify-center items-center">
+                    <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2">
+                        {stats.map((stat, idx) => (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 + (idx * 0.1) }}
+                                key={stat.id}
+                                onClick={() => setStatsModal({ isOpen: true, type: stat.id, title: stat.name, data: stat.data })}
+                                className="px-5 py-3 bg-white rounded-2xl border border-secondary-100 shadow-sm hover:border-primary-600 hover:shadow-xl hover:shadow-primary-500/5 transition-all cursor-pointer group flex items-center gap-4 min-w-[130px] shrink-0"
                             >
-                                <ClipboardList size={18} />
-                                <span className="hidden lg:block">Log Entry</span>
-                            </button>
-                        )}
+                                <div className={`${stat.bgColor} ${stat.color} p-2.5 rounded-xl group-hover:bg-primary-600 group-hover:text-white transition-all transform group-hover:rotate-12`}>
+                                    <stat.icon size={16} />
+                                </div>
+                                <div className="leading-tight">
+                                    <p className="text-[8px] font-black text-secondary-400 uppercase tracking-[0.2em] mb-1">{stat.name.split(' ')[1] || stat.name}</p>
+                                    <p className="text-lg font-black text-secondary-900 tracking-tight">{stat.value}</p>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
 
-                        {user?.role === 'student' && (
-                            <button
-                                onClick={() => navigate('/teachers')}
-                                className="group bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.25em] flex items-center gap-3 shadow-[0_15px_30px_-5px_rgba(235,50,50,0.3)] active:scale-95 transition-all"
-                            >
-                                <User size={18} />
-                                <span className="hidden lg:block">Consult Node</span>
-                            </button>
-                        )}
+                {/* 3. RIGHT: Rapid Action Hub */}
+                <div className="flex items-center justify-end gap-3 shrink-0">
+                    <div className="h-10 w-[1px] bg-secondary-100 mx-4 hidden xl:block"></div>
 
-                        {user?.role === 'teacher' && (
-                            <button
-                                onClick={handleOpenTimetableModal}
-                                className="group bg-white border-2 border-secondary-100 text-secondary-900 p-4 rounded-2xl hover:border-primary-600 hover:text-primary-600 hover:shadow-lg transition-all active:scale-95"
-                                title="Matrix Schedule"
-                            >
-                                <Calendar size={18} />
-                            </button>
-                        )}
+                    {user?.role === 'teacher' && (
+                        <button
+                            onClick={() => navigate('/attendance')}
+                            className="group bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.25em] flex items-center gap-3 shadow-[0_15px_30px_-5px_rgba(235,50,50,0.3)] active:scale-95 transition-all"
+                        >
+                            <ClipboardList size={18} />
+                            <span className="hidden lg:block">Log Entry</span>
+                        </button>
+                    )}
+
+                    {user?.role === 'student' && (
+                        <button
+                            onClick={() => navigate('/teachers')}
+                            className="group bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.25em] flex items-center gap-3 shadow-[0_15px_30px_-5px_rgba(235,50,50,0.3)] active:scale-95 transition-all"
+                        >
+                            <User size={18} />
+                            <span className="hidden lg:block">Consult Node</span>
+                        </button>
+                    )}
+
+                    {user?.role === 'teacher' && (
+                        <button
+                            onClick={handleOpenTimetableModal}
+                            className="group bg-white border-2 border-secondary-100 text-secondary-900 p-4 rounded-2xl hover:border-primary-600 hover:text-primary-600 hover:shadow-lg transition-all active:scale-95"
+                            title="Matrix Schedule"
+                        >
+                            <Calendar size={18} />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -254,59 +333,107 @@ const Dashboard = () => {
                 {/* LARGE SECTION (2/3): Timeline & Operations */}
                 <div className="lg:col-span-2 space-y-8">
                     {/* Academic Timeline Node */}
-                    <div className="card-premium group">
-                        <div className="flex items-center justify-between mb-8">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-primary-100 text-primary-600 rounded-2xl group-hover:bg-primary-600 group-hover:text-white transition-all duration-300">
-                                    <Calendar size={22} />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-primary-600 uppercase tracking-[0.2em] leading-none mb-1">Matrix Schedule</p>
-                                    <h3 className="text-xl font-black text-secondary-900 uppercase tracking-tight">Academic Timeline</h3>
+                    {user?.role !== 'admin' && (
+                        <div className="card-premium group">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-primary-100 text-primary-600 rounded-2xl group-hover:bg-primary-600 group-hover:text-white transition-all duration-300">
+                                        <Calendar size={22} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-primary-600 uppercase tracking-[0.2em] leading-none mb-1">Matrix Schedule</p>
+                                        <h3 className="text-xl font-black text-secondary-900 uppercase tracking-tight">Academic Timeline</h3>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="space-y-4">
-                            {upcomingAppointments.length > 0 ? upcomingAppointments.map((app) => (
-                                <div key={app._id} className="flex flex-wrap sm:flex-nowrap items-center gap-4 p-4 rounded-3xl border border-secondary-50 bg-secondary-50/30 hover:bg-white hover:border-primary-200 hover:shadow-xl hover:shadow-primary-500/5 transition-all duration-300 group/item">
-                                    <div className="flex flex-col items-center justify-center w-full sm:w-20 py-2 px-3 bg-white rounded-2xl shadow-sm border border-secondary-100 group-hover/item:border-primary-100">
-                                        <span className="text-[10px] font-black text-secondary-400 uppercase">{new Date(app.date).toLocaleDateString([], { month: 'short' })}</span>
-                                        <span className="text-xl font-black text-secondary-900 leading-none">{new Date(app.date).toLocaleDateString([], { day: '2-digit' })}</span>
-                                    </div>
-                                    <div className="flex-1 min-w-[150px]">
-                                        <h4 className="font-black text-secondary-800 text-xs uppercase tracking-tight line-clamp-1">{app.reason || 'Academic Consultation'}</h4>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-pulse"></div>
-                                            <p className="text-[9px] font-bold text-secondary-500 uppercase tracking-widest leading-none">
-                                                {user.role === 'teacher' ? `Student: ${app.student?.name || 'User'}` : `Faculty: ${app.teacher?.name || 'Staff'}`}
-                                            </p>
+                            <div className="space-y-4">
+                                {upcomingAppointments.length > 0 ? upcomingAppointments.map((app) => (
+                                    <div key={app._id} className="flex flex-wrap sm:flex-nowrap items-center gap-4 p-4 rounded-3xl border border-secondary-50 bg-secondary-50/30 hover:bg-white hover:border-primary-200 hover:shadow-xl hover:shadow-primary-500/5 transition-all duration-300 group/item">
+                                        <div className="flex flex-col items-center justify-center w-full sm:w-20 py-2 px-3 bg-white rounded-2xl shadow-sm border border-secondary-100 group-hover/item:border-primary-100">
+                                            <span className="text-[10px] font-black text-secondary-400 uppercase">{new Date(app.date).toLocaleDateString([], { month: 'short' })}</span>
+                                            <span className="text-xl font-black text-secondary-900 leading-none">{new Date(app.date).toLocaleDateString([], { day: '2-digit' })}</span>
+                                        </div>
+                                        <div className="flex-1 min-w-[150px]">
+                                            <h4 className="font-black text-secondary-800 text-xs uppercase tracking-tight line-clamp-1">{app.reason || 'Academic Consultation'}</h4>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
+                                                <p className="text-[9px] font-bold text-secondary-500 uppercase tracking-widest leading-none">
+                                                    {user?.role === 'teacher' ? `Student: ${app.student?.name || 'User'}` : `Faculty: ${app.teacher?.name || 'Staff'}`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="w-full sm:w-auto flex justify-end">
+                                            {user?.role === 'teacher' && app.status === 'pending' ? (
+                                                <button
+                                                    onClick={() => handleUpdateStatus(app._id, 'approved')}
+                                                    className="px-8 py-3 bg-primary-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20 active:scale-95 whitespace-nowrap"
+                                                >
+                                                    Authorize
+                                                </button>
+                                            ) : (
+                                                <div className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 border ${app.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                                                    <div className={`w-1 h-1 rounded-full ${app.status === 'approved' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                                                    {app.status}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="w-full sm:w-auto flex justify-end">
-                                        {user.role === 'teacher' && app.status === 'pending' ? (
-                                            <button
-                                                onClick={() => handleUpdateStatus(app._id, 'approved')}
-                                                className="px-8 py-3 bg-primary-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20 active:scale-95 whitespace-nowrap"
-                                            >
-                                                Authorize
-                                            </button>
-                                        ) : (
+                                )) : (
+                                    <div className="py-16 text-center bg-secondary-50/50 rounded-[2.5rem] border border-dashed border-secondary-200">
+                                        <Calendar className="mx-auto text-secondary-200 mb-4 opacity-50" size={48} />
+                                        <p className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.3em]">No Active Sessions Detected</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Admin Pending Appointments on Left */}
+                    {user?.role === 'admin' && (
+                        <div className="card-premium group relative overflow-hidden flex-1">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full -mr-16 -mt-16"></div>
+                            <div className="flex items-center justify-between mb-6 relative z-10">
+                                <div>
+                                    <h3 className="text-xl font-bold text-secondary-900 uppercase tracking-tight">Pending Appointments</h3>
+                                    <p className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.2em]">Global Review Queues</p>
+                                </div>
+                                <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl border border-amber-100">
+                                    <Clock size={20} />
+                                </div>
+                            </div>
+                            <div className="space-y-4 relative z-10">
+                                {upcomingAppointments.length > 0 ? upcomingAppointments.map((app) => (
+                                    <div key={app._id} className="flex flex-wrap sm:flex-nowrap items-center gap-4 p-4 rounded-3xl border border-secondary-50 bg-secondary-50/30 hover:bg-white hover:border-primary-200 hover:shadow-xl hover:shadow-primary-500/5 transition-all duration-300 group/item">
+                                        <div className="flex flex-col items-center justify-center w-full sm:w-20 py-2 px-3 bg-white rounded-2xl shadow-sm border border-secondary-100 group-hover/item:border-primary-100">
+                                            <span className="text-[10px] font-black text-secondary-400 uppercase">{new Date(app.date).toLocaleDateString([], { month: 'short' })}</span>
+                                            <span className="text-xl font-black text-secondary-900 leading-none">{new Date(app.date).toLocaleDateString([], { day: '2-digit' })}</span>
+                                        </div>
+                                        <div className="flex-1 min-w-[150px]">
+                                            <h4 className="font-black text-secondary-800 text-xs uppercase tracking-tight line-clamp-1">{app.reason || 'Consultation Node'}</h4>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
+                                                <p className="text-[9px] font-bold text-secondary-500 uppercase tracking-widest leading-none">
+                                                    T: {app.teacher?.name} | S: {app.student?.name}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="w-full sm:w-auto flex justify-end">
                                             <div className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 border ${app.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                                                 <div className={`w-1 h-1 rounded-full ${app.status === 'approved' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
                                                 {app.status}
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
-                                </div>
-                            )) : (
-                                <div className="py-16 text-center bg-secondary-50/50 rounded-[2.5rem] border border-dashed border-secondary-200">
-                                    <Calendar className="mx-auto text-secondary-200 mb-4 opacity-50" size={48} />
-                                    <p className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.3em]">No Active Sessions Detected</p>
-                                </div>
-                            )}
+                                )) : (
+                                    <div className="py-16 text-center bg-secondary-50/50 rounded-[2.5rem] border border-dashed border-secondary-200">
+                                        <CheckCircle2 className="mx-auto text-emerald-400 mb-4 opacity-80" size={48} />
+                                        <p className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.3em]">No Pending Requests</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Operation Nodes Card (Black Box) */}
                     <div className="card-premium bg-gradient-to-br from-secondary-900 to-black text-white border-none relative overflow-hidden group">
@@ -345,111 +472,31 @@ const Dashboard = () => {
                 </div>
 
                 <div className="lg:col-span-1">
-                    {user?.role === 'student' && (
-                        <div className="card-premium border-t-8 border-emerald-500 group overflow-hidden relative h-full">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 blur-3xl rounded-full -mr-16 -mt-16"></div>
-                            <div className="flex items-center justify-between mb-8 relative z-10">
-                                <div>
-                                    <h3 className="text-xl font-bold text-secondary-900 uppercase tracking-tight">Academic Integrity</h3>
-                                    <p className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.2em]">Live Stability Metrics</p>
+                    {/* Global Admin, Student & Teacher Calendar */}
+                    {(user?.role === 'admin' || user?.role === 'student' || user?.role === 'teacher') && (
+                        <div className="space-y-8 h-full">
+                            {/* Calendar View */}
+                            <div className="card-premium border-t-8 border-[#800000] overflow-hidden relative group">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-[#800000]/5 blur-3xl rounded-full -mr-16 -mt-16"></div>
+                                <div className="flex items-center justify-between mb-8 relative z-10">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-secondary-900 uppercase tracking-tight">
+                                            {user?.role === 'admin' ? 'Operation Cycle' : 'My Schedule'}
+                                        </h3>
+                                        <p className="text-[10px] font-black text-[#800000] uppercase tracking-[0.2em]">
+                                            {user?.role === 'admin' ? 'Matrix Live Calendar' : 'Click date to view Timetable'}
+                                        </p>
+                                    </div>
+                                    <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100 shadow-sm">
+                                        <Calendar size={20} />
+                                    </div>
                                 </div>
-                                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
-                                    <TrendingUp size={20} />
-                                </div>
-                            </div>
-
-                            <div className="relative flex justify-center py-6">
-                                <svg className="w-48 h-48 sm:w-64 sm:h-64 transform -rotate-90 drop-shadow-2xl overflow-visible" viewBox="0 0 208 208">
-                                    <defs>
-                                        <linearGradient id="gradientIntegrity" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" stopColor="#10b981" />
-                                            <stop offset="100%" stopColor="#059669" />
-                                        </linearGradient>
-                                        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                                            <feGaussianBlur stdDeviation="3" result="blur" />
-                                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                        </filter>
-                                    </defs>
-                                    <circle
-                                        cx="104"
-                                        cy="104"
-                                        r="80"
-                                        stroke="currentColor"
-                                        strokeWidth="8"
-                                        fill="transparent"
-                                        className="text-secondary-100"
+                                <div className="relative z-10 custom-calendar-wrapper flex justify-center w-full">
+                                    <CalendarComponent 
+                                        onClickDay={(date) => handleDateClick(date)}
+                                        className="w-full bg-secondary-50/50 p-2 rounded-2xl border border-secondary-100 text-sm font-bold shadow-sm"
                                     />
-                                    <motion.circle
-                                        initial={{ strokeDashoffset: 502 }}
-                                        animate={{
-                                            strokeDashoffset: 502 - (502 * (attendanceStats.percentage / 100))
-                                        }}
-                                        transition={{ duration: 2, ease: "circOut" }}
-                                        cx="104"
-                                        cy="104"
-                                        r="80"
-                                        stroke="url(#gradientIntegrity)"
-                                        strokeWidth="12"
-                                        strokeDasharray="502"
-                                        strokeLinecap="round"
-                                        fill="transparent"
-                                        style={{ transformOrigin: 'center', filter: 'url(#glow)' }}
-                                    />
-                                </svg>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-5xl sm:text-6xl font-black text-secondary-900 tracking-tighter">
-                                            {attendanceStats.percentage}
-                                        </span>
-                                        <span className="text-xl sm:text-2xl font-black text-primary-600">%</span>
-                                    </div>
-                                    <div className="mt-2 flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
-                                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                                        <span className="text-[9px] font-black uppercase tracking-widest">Live Integrity</span>
-                                    </div>
                                 </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4 mt-8">
-                                <div className="p-4 bg-secondary-50/50 rounded-2xl border border-secondary-100 hover:border-emerald-200 transition-all">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                                        <p className="text-[9px] font-black text-secondary-500 uppercase tracking-widest">Attend</p>
-                                    </div>
-                                    <p className="text-2xl font-bold text-secondary-900">{attendanceStats.present}</p>
-                                </div>
-                                <div className="p-4 bg-secondary-50/50 rounded-2xl border border-secondary-100 hover:border-primary-200 transition-all">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
-                                        <p className="text-[9px] font-black text-secondary-500 uppercase tracking-widest">Absents</p>
-                                    </div>
-                                    <p className="text-2xl font-bold text-secondary-900">{attendanceStats.total - attendanceStats.present}</p>
-                                </div>
-                            </div>
-
-                            <div className="mt-8 pt-8 border-t border-secondary-50 space-y-4">
-                                <h4 className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.2em] mb-4">Subject Insight</h4>
-                                {subjects.slice(0, 3).map(sub => {
-                                    const subAttendance = studentHistory?.filter(r => r.subject?._id === sub._id);
-                                    const total = subAttendance?.length || 0;
-                                    const present = subAttendance?.filter(r => r.status === 'present').length || 0;
-                                    const perc = total > 0 ? (present / total) * 100 : 0;
-                                    return (
-                                        <div key={sub._id} className="space-y-1.5">
-                                            <div className="flex justify-between items-center text-[10px] font-bold">
-                                                <span className="text-secondary-700 uppercase">{sub.name}</span>
-                                                <span className={perc < 75 ? 'text-red-500' : 'text-emerald-500'}>{Math.round(perc)}%</span>
-                                            </div>
-                                            <div className="h-1.5 w-full bg-secondary-50 rounded-full overflow-hidden">
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${perc}%` }}
-                                                    className={`h-full rounded-full ${perc < 75 ? 'bg-red-500' : 'bg-emerald-500'}`}
-                                                ></motion.div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
                             </div>
                         </div>
                     )}
@@ -527,12 +574,12 @@ const Dashboard = () => {
                             ))}
                         </div>
                         <div className="px-2 mt-auto">
-                            <a 
-                                href="https://techcrunch.com/category/startups/" 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
+                            <a
+                                href="https://techcrunch.com/category/startups/"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 style={{ backgroundColor: '#800000' }}
-                                className="w-full py-4 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:opacity-90 hover:shadow-[0_20px_40px_-5px_rgba(128,0,0,0.4)] hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-4 shadow-[0_15px_30px_-5px_rgba(128,0,0,0.3)] active:scale-95 border border-white/10"
+                                className="w-full py-4 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:opacity-90 hover:shadow-[0_20px_40px_-5px_rgba(255,255,255,0.4)] hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-4 shadow-[0_15px_30px_-5px_rgba(255,255,255,0.3)] active:scale-95 border border-white/10"
                             >
                                 Explore Global Data Matrix <ExternalLink size={18} />
                             </a>
@@ -620,6 +667,78 @@ const Dashboard = () => {
                 )}
             </AnimatePresence>
 
+            {/* Day Timetable Modal for Students */}
+            <AnimatePresence>
+                {showDateTimetable && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowDateTimetable(false)}
+                            className="absolute inset-0 bg-secondary-950/60 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden"
+                        >
+                            <div className="p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div>
+                                        <h2 className="text-xl font-black text-secondary-900 tracking-tight uppercase italic">
+                                            {selectedCalendarDate?.toLocaleDateString([], { weekday: 'long' })} Slots
+                                        </h2>
+                                        <p className="text-primary-600 text-[10px] font-black uppercase tracking-[0.2em] mt-0.5">
+                                            {selectedCalendarDate?.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' })}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowDateTimetable(false)}
+                                        className="p-2 hover:bg-secondary-50 text-secondary-400 hover:text-secondary-900 rounded-xl transition-all"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {daySchedule.map((slot, idx) => (
+                                        <div key={idx} className={`p-4 rounded-[1.5rem] border transition-all flex items-center justify-between group ${slot ? 'bg-primary-50/30 border-primary-100 shadow-sm' : 'bg-secondary-50/50 border-secondary-100 opacity-60'}`}>
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black shadow-sm transition-all ${slot ? 'bg-primary-600 text-white rotate-3' : 'bg-white text-secondary-300'}`}>
+                                                    {idx + 1}
+                                                </div>
+                                                <div>
+                                                    <p className={`text-xs font-black uppercase tracking-tight ${slot ? 'text-secondary-900' : 'text-secondary-400'}`}>
+                                                        {slot ? slot.subject : 'Free Interval'}
+                                                    </p>
+                                                    <p className="text-[9px] font-bold text-secondary-500 uppercase tracking-widest mt-0.5">
+                                                        {slot ? (user?.role === 'teacher' ? `Division: ${slot.department}` : `Faculty: ${slot.teacher}`) : 'Matrix Calibration'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {slot && (
+                                                <div className="px-3 py-1.5 bg-white rounded-lg border border-primary-100 shadow-sm">
+                                                    <p className="text-[8px] font-black text-primary-600 tracking-tighter uppercase whitespace-nowrap">{slot.time}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <button
+                                    onClick={() => setShowDateTimetable(false)}
+                                    className="w-full py-3.5 bg-secondary-900 text-white rounded-xl font-black text-[9px] uppercase tracking-[0.2em] mt-6 hover:bg-primary-600 transition-all shadow-xl shadow-secondary-900/20 active:scale-95"
+                                >
+                                    Close Matrix View
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
             {/* Stats Summary Modal */}
             <AnimatePresence>
                 {statsModal.isOpen && (
@@ -679,7 +798,7 @@ const Dashboard = () => {
                                                     {statsModal.type === 'students' && `ID: ${item.rollNumber || 'N/A'} • ${item.department?.name || 'GEN'}`}
                                                     {statsModal.type === 'teachers' && `${item.designation || 'Faculty'} • ${item.department?.name || item.user?.department?.name || 'GEN'}`}
                                                     {statsModal.type === 'subjects' && `Code: ${item.code || 'N/A'} • Credits: ${item.credits || '-'}`}
-                                                    {statsModal.type === 'departments' && `Programme: ${item.name || 'N/A'} • Head: ${item.head || 'Staff'}`}
+                                                    {statsModal.type === 'departments' && `Course: ${item.name || 'N/A'} • Head: ${item.head || 'Staff'}`}
                                                 </p>
                                             </div>
                                         </div>
