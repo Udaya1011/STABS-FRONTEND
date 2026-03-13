@@ -472,9 +472,23 @@ const Chat = () => {
 
                     {/* Messages */}
                     <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-secondary-50/20 transition-colors">
-                        {messages.map((msg, index) => {
-                            const isMe = String(msg.sender?._id || msg.sender) === String(user?._id);
-                            const key = msg._id || `msg-${index}-${msg.createdAt}`;
+                        {messages.filter((msg) => {
+                            const myId       = String(user?._id   || '');
+                            const otherId    = String(userId       || '');
+                            const senderId   = String(msg.sender?._id   || msg.sender   || '');
+                            const receiverId = String(msg.receiver?._id || msg.receiver || '');
+                            if (!myId || !otherId) return false;
+                            // Show if: I sent to them, OR they sent to me
+                            return (
+                                (senderId === myId    && receiverId === otherId) ||
+                                (senderId === otherId && receiverId === myId)
+                            );
+                        }).map((msg, index) => {
+                            const myId     = String(user?._id || '');
+                            const senderId = String(msg.sender?._id || msg.sender || '');
+                            // _isMine = set when WE sent via API (bulletproof right-side indicator)
+                            const isMe     = msg._isMine === true || (senderId !== '' && senderId === myId);
+                            const key      = msg._id || `msg-${index}-${msg.createdAt}`;
                             return (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.95 }}

@@ -65,7 +65,10 @@ export const messageSlice = createSlice({
             state.messages = [];
         },
         addMessage: (state, action) => {
-            state.messages.push(action.payload);
+            const msg = action.payload;
+            // Prevent duplicate messages (can arrive via socket AND sendMessage.fulfilled)
+            if (msg._id && state.messages.some(m => String(m._id) === String(msg._id))) return;
+            state.messages.push(msg);
         },
         setUnreadCount: (state, action) => {
             const { senderId, count, lastMessageTime } = action.payload;
@@ -79,9 +82,11 @@ export const messageSlice = createSlice({
         },
         markMessagesAsRead: (state, action) => {
             const { readerId, readAt } = action.payload;
+            const readerStr = String(readerId || '');
             state.messages = state.messages.map(msg => {
-                // If I am the sender and the reader is the receiver
-                if (String(msg.receiver) === String(readerId) && !msg.isRead) {
+                // Normalize receiver: could be plain string OR ObjectId object
+                const msgReceiver = String(msg.receiver?._id || msg.receiver || '');
+                if (msgReceiver === readerStr && !msg.isRead) {
                     return { ...msg, isRead: true, readAt };
                 }
                 return msg;
@@ -106,14 +111,17 @@ export const messageSlice = createSlice({
                 state.unreadCounts = action.payload;
             })
             .addCase(sendMessage.fulfilled, (state, action) => {
-                // Avoid duplicate if addMessage already added it via socket
-                const exists = state.messages.some(m => m._id === action.payload._id);
+                const msg = action.payload;
+                const exists = state.messages.some(m => String(m._id) === String(msg._id));
                 if (!exists) {
-                    state.messages.push(action.payload);
+                    // Tag explicitly so isMe check is bulletproof regardless of ObjectId format
+                    state.messages.push({ ...msg, _isMine: true });
                 }
-                const receiverId = action.payload.receiver?._id || action.payload.receiver;
-                if (!state.unreadCounts[receiverId]) state.unreadCounts[receiverId] = {};
-                state.unreadCounts[receiverId].lastMessageTime = action.payload.createdAt;
+                const receiverId = msg.receiver?._id || msg.receiver;
+                if (receiverId) {
+                    if (!state.unreadCounts[receiverId]) state.unreadCounts[receiverId] = {};
+                    state.unreadCounts[receiverId].lastMessageTime = msg.createdAt;
+                }
             });
     },
 });

@@ -58,39 +58,53 @@ const SocketListener = () => {
         });
 
         socket.on('connect', () => {
-            socket.emit('join', user._id);
+            console.log('Socket Connected. Joining room:', user._id);
+            socket.emit('join', user._id.toString());
         });
-        socket.emit('join', user._id);
+        
+        // Immediate join in case it's already connected or buffering works
+        if (socket.connected) {
+            socket.emit('join', user._id.toString());
+        }
 
         socket.on('newMessage', (message) => {
+            console.log('New Message Received via Socket:', message);
             const currentPath = window.location.pathname;
-            const senderId = message.sender?._id || message.sender;
-            const isChattingWithSender = currentPath === `/chat/${senderId}`;
+            const senderId = String(message.sender?._id || message.sender || '');
+            const receiverId = String(message.receiver?._id || message.receiver || '');
+
+            // Use endsWith for robustness (handles trailing slash / minor router variants)
+            const isChattingWithSender  = senderId  && currentPath.endsWith(`/chat/${senderId}`);
+            const isChattingWithReceiver = receiverId && currentPath.endsWith(`/chat/${receiverId}`);
+            const inThisChat = isChattingWithSender || isChattingWithReceiver;
 
             // Call log messages (no fileUrl) — silently update chat; don't ring or toast
             if (message.messageType === 'call' && !message.fileUrl) {
-                if (isChattingWithSender) {
+                if (inThisChat) {
                     dispatch(addMessage(message));
                 }
                 return;
             }
 
-            // Play notification sound only for real incoming messages
+            // ALWAYS add to store — Chat component displays only relevant messages
+            dispatch(addMessage(message));
+
+            // Play notification sound for real incoming messages
             notificationSound.currentTime = 0;
             notificationSound.volume = 0.5;
             notificationSound.play().catch(e => console.log('Message audio play failed:', e));
 
-            if (isChattingWithSender) {
-                dispatch(addMessage(message));
-                // Mark as read immediately since we're in that chat
+            // Mark as read only if currently viewing this conversation
+            if (inThisChat) {
                 axios.post(`/api/messages/${senderId}/read`, {}, {
                     headers: { Authorization: `Bearer ${user.token}` }
                 }).catch(err => console.error('Mark as read failed:', err));
             }
 
 
-            // Show global notification — call invites with room link, or regular msgs when not in chat
-            if ((message.messageType === 'call' && message.fileUrl) || !isChattingWithSender) {
+
+            // Show global notification only when NOT viewing this conversation
+            if ((message.messageType === 'call' && message.fileUrl) || !inThisChat) {
                 const toastId = toast.custom((t) => (
                     <div
                         className={`${t.visible ? 'animate-enter' : 'animate-leave'
