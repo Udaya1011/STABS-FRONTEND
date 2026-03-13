@@ -27,10 +27,13 @@ const WebRTCCall = () => {
     const remoteStreamRef = useRef(null);
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
-    const receiverRingtone = useRef(new Audio('/custom-ringtone.mpeg'));
-    const callerRingtone = useRef(new Audio('/custom-ringtone.mpeg'));
+    const receiverRingtone = useRef(null);
+    const callerRingtone = useRef(null);
     const timerRef = useRef(null);
     const ringTimeoutRef = useRef(null);
+    const isCallerRef = useRef(false);
+    const partnerRef = useRef(null);
+    const callTypeRef = useRef('voice');
     const callStateRef = useRef('idle'); // mirrors callState for use inside socket closures
 
     useEffect(() => {
@@ -38,19 +41,60 @@ const WebRTCCall = () => {
     }, [callState]);
 
     useEffect(() => {
-        callerRingtone.current.loop = true;
+        isCallerRef.current = isCaller;
+    }, [isCaller]);
+
+    useEffect(() => {
+        partnerRef.current = partner;
+    }, [partner]);
+
+    useEffect(() => {
+        callTypeRef.current = callType;
+    }, [callType]);
+
+    useEffect(() => {
+        receiverRingtone.current = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3');
+        callerRingtone.current = new Audio('https://assets.mixkit.co/active_storage/sfx/1358/1358-preview.mp3');
+        
         receiverRingtone.current.loop = true;
+        callerRingtone.current.loop = true;
+
+        const primeAudio = () => {
+            if (receiverRingtone.current) {
+                receiverRingtone.current.play().then(() => {
+                    receiverRingtone.current.pause();
+                    receiverRingtone.current.currentTime = 0;
+                }).catch(() => {});
+            }
+            if (callerRingtone.current) {
+                callerRingtone.current.play().then(() => {
+                    callerRingtone.current.pause();
+                    callerRingtone.current.currentTime = 0;
+                }).catch(() => {});
+            }
+            window.removeEventListener('mousedown', primeAudio);
+        };
+        window.addEventListener('mousedown', primeAudio);
+
+        return () => {
+            stopAllRingtones();
+            window.removeEventListener('mousedown', primeAudio);
+        };
     }, []);
 
     const stopAllRingtones = () => {
         try {
-            receiverRingtone.current.pause();
-            receiverRingtone.current.currentTime = 0;
-            receiverRingtone.current.volume = 0; // Absolute silence
+            if (receiverRingtone.current) {
+                receiverRingtone.current.pause();
+                receiverRingtone.current.currentTime = 0;
+                receiverRingtone.current.volume = 0;
+            }
             
-            callerRingtone.current.pause();
-            callerRingtone.current.currentTime = 0;
-            callerRingtone.current.volume = 0;
+            if (callerRingtone.current) {
+                callerRingtone.current.pause();
+                callerRingtone.current.currentTime = 0;
+                callerRingtone.current.volume = 0;
+            }
         } catch (e) {
             console.log('Error stopping ringtones:', e);
         }
@@ -98,6 +142,7 @@ const WebRTCCall = () => {
             setIsCaller(false);
 
             stopAllRingtones();
+            receiverRingtone.current.volume = 1;
             receiverRingtone.current.play().catch(e => console.log('Ringtone failed:', e));
 
             // Auto-end after 60 seconds if not answered
@@ -133,6 +178,16 @@ const WebRTCCall = () => {
 
         s.on('rtc-end', () => {
             endCallLocally();
+        });
+
+        s.on('rtc-answered-elsewhere', () => {
+            // Stop sound and hide UI without sending another 'Call ended' message
+            stopAllRingtones();
+            if (timerRef.current) clearInterval(timerRef.current);
+            if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current);
+            setCallState('idle');
+            setPartner(null);
+            setIsCaller(false);
         });
 
         return () => {
@@ -290,22 +345,22 @@ const WebRTCCall = () => {
         if (timerRef.current) clearInterval(timerRef.current);
         if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current);
 
-        if (isCaller && partner) {
-            if (duration > 0 || callStateRef.current === 'connected') {
-                dispatch(sendMessage({
-                    receiver: partner.id,
-                    content: `Direct ${callType} call ended • Duration: ${formatTime(duration)}`,
-                    messageType: 'call',
-                    fileUrl: null
-                }));
-            } else if (callStateRef.current === 'calling' || callStateRef.current === 'ringing') {
-                dispatch(sendMessage({
-                    receiver: partner.id,
-                    content: `Missed direct ${callType} call`,
-                    messageType: 'call',
-                    fileUrl: null
-                }));
-            }
+        const isCallerVal = isCallerRef.current;
+        const partnerVal = partnerRef.current;
+        const callTypeVal = callTypeRef.current;
+
+        if (isCallerVal && partnerVal) {
+            const isConnected = duration > 0 || callStateRef.current === 'connected';
+            const logContent = isConnected 
+                ? `Call ended • ${formatTime(duration)}`
+                : `Missed call`;
+
+            dispatch(sendMessage({
+                receiver: partnerVal.id,
+                content: logContent,
+                messageType: 'call',
+                fileUrl: null
+            }));
         }
 
         if (localStream.current) {
@@ -389,7 +444,7 @@ const WebRTCCall = () => {
     }, [user, socket]);
 
     if (callState === 'idle') return null;
-
+    
     return createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <motion.div 

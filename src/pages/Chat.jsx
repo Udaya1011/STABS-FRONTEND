@@ -543,7 +543,9 @@ const Chat = () => {
                                                 )}
                                             </div>
                                         )}
-                                        <p className="text-sm font-medium leading-relaxed">{msg.content}</p>
+                                        {msg.messageType !== 'call' && (
+                                            <p className="text-sm font-medium leading-relaxed">{msg.content}</p>
+                                        )}
                                         <div
                                             className={`flex items-center gap-1.5 mt-2 cursor-pointer select-none ${isMe ? 'text-primary-100/70' : 'text-secondary-400'}`}
                                             onClick={() => setSelectedMessageDetails(selectedMessageDetails === msg._id ? null : msg._id)}

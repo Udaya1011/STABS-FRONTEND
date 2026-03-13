@@ -17,6 +17,7 @@ const SocketListener = () => {
     const { user } = useSelector((state) => state.auth);
     const { unreadCounts } = useSelector((state) => state.messages);
     const unreadCountsRef = useRef(unreadCounts);
+    const activeCallToastId = useRef(null);
     
     useEffect(() => {
         unreadCountsRef.current = unreadCounts;
@@ -63,30 +64,34 @@ const SocketListener = () => {
 
         socket.on('newMessage', (message) => {
             const currentPath = window.location.pathname;
-            const isChattingWithSender = currentPath === `/chat/${message.sender._id}` || currentPath === `/chat/${message.sender}`;
+            const senderId = message.sender?._id || message.sender;
+            const isChattingWithSender = currentPath === `/chat/${senderId}`;
 
-            // Play notification sound
-            if (message.messageType === 'call') {
-                const callAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/1317/1317-preview.mp3');
-                callAudio.play().catch(e => console.log('Call audio play failed:', e));
-            } else {
-                notificationSound.currentTime = 0;
-                notificationSound.volume = 0.5;
-                notificationSound.play().catch(e => console.log('Message audio play failed:', e));
+            // Call log messages (no fileUrl) — silently update chat; don't ring or toast
+            if (message.messageType === 'call' && !message.fileUrl) {
+                if (isChattingWithSender) {
+                    dispatch(addMessage(message));
+                }
+                return;
             }
+
+            // Play notification sound only for real incoming messages
+            notificationSound.currentTime = 0;
+            notificationSound.volume = 0.5;
+            notificationSound.play().catch(e => console.log('Message audio play failed:', e));
 
             if (isChattingWithSender) {
                 dispatch(addMessage(message));
-                // If we are currently chatting with this user, mark as read immediately
-                const senderId = message.sender._id || message.sender;
+                // Mark as read immediately since we're in that chat
                 axios.post(`/api/messages/${senderId}/read`, {}, {
                     headers: { Authorization: `Bearer ${user.token}` }
                 }).catch(err => console.error('Mark as read failed:', err));
             }
 
-            // Show global notification (Always show if it's a Call, even if in chat, to give "Join" option)
-            if (message.messageType === 'call' || !isChattingWithSender) {
-                toast.custom((t) => (
+
+            // Show global notification — call invites with room link, or regular msgs when not in chat
+            if ((message.messageType === 'call' && message.fileUrl) || !isChattingWithSender) {
+                const toastId = toast.custom((t) => (
                     <div
                         className={`${t.visible ? 'animate-enter' : 'animate-leave'
                             } max-w-md w-full bg-white shadow-premium rounded-3xl pointer-events-auto flex flex-col ring-8 ring-primary-500/10 border-2 border-primary-200 overflow-hidden cursor-pointer relative`}
@@ -99,18 +104,18 @@ const SocketListener = () => {
                             toast.dismiss(t.id);
                         }}
                     >
-                        {message.messageType === 'call' && (
+                        {message.messageType === 'call' && message.fileUrl && (
                             <div className="absolute inset-0 bg-primary-600/5 animate-pulse pointer-events-none"></div>
                         )}
                         <div className="p-6 flex items-start gap-5 relative z-10">
                             <div className="flex-shrink-0">
-                                <div className={`h-16 w-16 rounded-2xl flex items-center justify-center font-bold text-white shadow-2xl ${message.messageType === 'call' ? 'bg-primary-600 animate-bounce' : 'bg-secondary-800'}`}>
+                                <div className={`h-16 w-16 rounded-2xl flex items-center justify-center font-bold text-white shadow-2xl ${message.messageType === 'call' && message.fileUrl ? 'bg-primary-600 animate-bounce' : 'bg-secondary-800'}`}>
                                     {(message.sender?.name || 'U').charAt(0)}
                                 </div>
                             </div>
                             <div className="flex-1">
                                 <p className="text-[10px] font-black text-primary-600 uppercase tracking-[0.2em] mb-1">
-                                    {message.messageType === 'call' ? '⚡ Priority Direct Call' : 'New Transmission'}
+                                    {message.messageType === 'call' && message.fileUrl ? '⚡ Priority Direct Call' : 'New Transmission'}
                                 </p>
                                 <h4 className="text-lg font-black text-secondary-900 uppercase tracking-tight">
                                     {message.sender?.name || 'Academic Faculty'}
@@ -121,7 +126,7 @@ const SocketListener = () => {
                             </div>
                         </div>
 
-                        {message.messageType === 'call' ? (
+                        {message.messageType === 'call' && message.fileUrl ? (
                             <div className="flex border-t border-secondary-100 bg-secondary-50/50 p-4 gap-3 relative z-10">
                                 <button
                                     onClick={(e) => {
@@ -170,6 +175,10 @@ const SocketListener = () => {
                     </div>
                 ), { duration: message.messageType === 'call' ? 45000 : 5000 });
 
+                if (message.messageType === 'call') {
+                    activeCallToastId.current = toastId;
+                }
+
                 if (message.messageType !== 'call') {
                     // Fetch unread counts to update badges globally
                     const currentCount = unreadCountsRef.current[message.sender._id || message.sender]?.count || 0;
@@ -192,6 +201,13 @@ const SocketListener = () => {
 
         socket.on('messagesRead', (data) => {
             dispatch(markMessagesAsRead(data));
+        });
+
+        socket.on('rtc-end', () => {
+            if (activeCallToastId.current) {
+                toast.dismiss(activeCallToastId.current);
+                activeCallToastId.current = null;
+            }
         });
 
         socket.on('newNotification', (notification) => {

@@ -106,8 +106,12 @@ export const messageSlice = createSlice({
                 state.unreadCounts = action.payload;
             })
             .addCase(sendMessage.fulfilled, (state, action) => {
-                state.messages.push(action.payload);
-                const receiverId = action.payload.receiver;
+                // Avoid duplicate if addMessage already added it via socket
+                const exists = state.messages.some(m => m._id === action.payload._id);
+                if (!exists) {
+                    state.messages.push(action.payload);
+                }
+                const receiverId = action.payload.receiver?._id || action.payload.receiver;
                 if (!state.unreadCounts[receiverId]) state.unreadCounts[receiverId] = {};
                 state.unreadCounts[receiverId].lastMessageTime = action.payload.createdAt;
             });
