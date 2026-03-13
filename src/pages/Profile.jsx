@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Mail, Phone, MapPin, Shield, Camera, Edit2, Check, X, ShieldCheck, GraduationCap, Loader2, Key, Eye, EyeOff, Search, Map } from 'lucide-react';
+import { Mail, Phone, MapPin, Shield, Camera, Edit2, Check, X, ShieldCheck, GraduationCap, Loader2, Key, Eye, EyeOff, Search, Map, RefreshCcw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { updateProfile, saveFaceDescriptor } from '../store/slices/authSlice';
 import axios from 'axios';
@@ -78,7 +78,6 @@ const Profile = () => {
             const token = user.token;
             const config = {
                 headers: {
-                    'Content-Type': 'multipart/form-data',
                     Authorization: `Bearer ${token}`
                 }
             };
@@ -171,7 +170,26 @@ const Profile = () => {
                             </p>
                         </div>
 
-                        <div className="md:mb-2">
+                        <div className="md:mb-2 flex gap-3">
+                            {user?.role === 'teacher' && (
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const token = user.token;
+                                            const config = { headers: { Authorization: `Bearer ${token}` } };
+                                            toast.loading('Syncing free periods...', { id: 'sync' });
+                                            const res = await axios.post('/api/appointments/sync-slots', {}, config);
+                                            toast.success(res.data.message, { id: 'sync' });
+                                        } catch (err) {
+                                            toast.error(err.response?.data?.message || 'Sync failed', { id: 'sync' });
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 px-6 py-3 bg-secondary-900 text-white rounded-xl font-bold hover:bg-primary-600 transition-all active:scale-95 shadow-lg group"
+                                >
+                                    <RefreshCcw size={18} className="group-hover:rotate-180 transition-transform duration-500" />
+                                    SYNC SLOTS
+                                </button>
+                            )}
                             <button
                                 onClick={() => setIsEditing(!isEditing)}
                                 className="flex items-center gap-2 px-6 py-3 bg-white border border-secondary-200 rounded-xl font-bold text-secondary-700 shadow-sm hover:border-primary-300 hover:text-primary-600 transition-all active:scale-95"

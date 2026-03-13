@@ -432,17 +432,17 @@ const Teachers = () => {
                             animate={{ x: 0 }}
                             exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="relative w-full max-w-lg bg-white h-screen shadow-2xl overflow-y-auto"
+                            className="relative w-full max-w-sm bg-secondary-50 h-screen shadow-2xl overflow-y-auto"
                         >
-                            <div className="p-8 space-y-8">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-primary-600 text-white rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
-                                            <UserCheck size={24} />
+                            <div className="p-5 space-y-4">
+                                <div className="flex items-center justify-between px-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-[#800000] text-white rounded-lg flex items-center justify-center shadow-md">
+                                            <UserCheck size={16} />
                                         </div>
                                         <div>
-                                            <h3 className="text-2xl font-black text-secondary-900 uppercase tracking-tight">{selectedTeacher.user?.name}</h3>
-                                            <p className="text-xs font-black text-primary-600 uppercase tracking-[0.2em]">{selectedTeacher.designation || 'FAUCLTY'}</p>
+                                            <h3 className="text-base font-black text-secondary-900 uppercase tracking-tight leading-tight">{selectedTeacher.user?.name}</h3>
+                                            <p className="text-[9px] font-black text-[#800000] uppercase tracking-[0.2em]">{selectedTeacher.designation || 'FACULTY'}</p>
                                         </div>
                                     </div>
                                     <button onClick={() => setShowSidePanel(false)} className="p-2 text-secondary-400 hover:text-secondary-900 rounded-xl transition-all">
@@ -451,8 +451,8 @@ const Teachers = () => {
                                 </div>
 
                                 <div className="relative group mx-auto w-fit">
-                                    <div className="absolute -inset-6 bg-gradient-to-tr from-[#800000] to-red-100 rounded-full opacity-20 group-hover:opacity-30 transition-opacity blur-2xl"></div>
-                                    <div className="w-52 h-52 overflow-hidden rounded-full shadow-2xl relative z-10 border-[6px] border-[#800000] p-1.5 bg-white transition-transform duration-500 group-hover:scale-105">
+                                    <div className="absolute -inset-3 bg-gradient-to-tr from-[#800000] to-red-100 rounded-full opacity-20 group-hover:opacity-30 transition-opacity blur-lg"></div>
+                                    <div className="w-24 h-24 overflow-hidden rounded-full shadow-lg relative z-10 border-[3px] border-[#800000] p-1 bg-white transition-transform duration-500 group-hover:scale-105">
                                         <div className="w-full h-full rounded-full overflow-hidden bg-secondary-50">
                                             {selectedTeacher.user?.avatar && !selectedTeacher.user.avatar.includes('default.png') ? (
                                                 <img 
@@ -461,24 +461,24 @@ const Teachers = () => {
                                                     className="w-full h-full object-cover" 
                                                 />
                                             ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-5xl font-black text-[#800000] uppercase">
+                                                <div className="w-full h-full flex items-center justify-center text-4xl font-black text-[#800000] uppercase">
                                                     {selectedTeacher.user?.name?.charAt(0)}
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-full shadow-lg border-4 border-[#800000] z-20 flex items-center justify-center text-[#800000]">
-                                        <UserCheck size={18} />
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-white rounded-full shadow-md border-2 border-[#800000] z-20 flex items-center justify-center text-[#800000]">
+                                        <UserCheck size={10} />
                                     </div>
                                 </div>
 
-                                <div className="space-y-6">
-                                    <div className="bg-secondary-50/50 rounded-[2rem] p-8 border border-secondary-100">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="w-2 h-2 bg-primary-600 rounded-full animate-pulse"></div>
-                                            <h4 className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.2em]">Professional Matrix</h4>
+                                <div className="space-y-4">
+                                    <div className="bg-secondary-50/50 rounded-[1.5rem] p-5 border border-secondary-100">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="w-1.5 h-1.5 bg-[#800000] rounded-full animate-pulse"></div>
+                                            <h4 className="text-[9px] font-black text-secondary-400 uppercase tracking-[0.2em]">Professional Matrix</h4>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1">
                                                 <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest">Department</p>
                                                 <p className="text-sm font-bold text-secondary-900">{selectedTeacher.user?.department?.name || 'General Batch'}</p>
@@ -490,26 +490,26 @@ const Teachers = () => {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 gap-4">
-                                        <div className="bg-white p-6 rounded-[2rem] border border-secondary-100 shadow-sm flex items-center gap-4 group hover:border-primary-200 transition-all">
-                                            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl group-hover:scale-110 transition-transform"><BookOpen size={24} /></div>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <div className="bg-white p-4 rounded-[1.25rem] border border-secondary-100 shadow-sm flex items-center gap-3 group hover:border-primary-200 transition-all">
+                                            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform"><BookOpen size={20} /></div>
                                             <div>
-                                                <p className="text-[9px] font-bold text-secondary-400 uppercase tracking-[0.1em]">Qualifications</p>
-                                                <p className="text-sm font-black text-secondary-900">{selectedTeacher.qualifications || 'Expert Professional'}</p>
+                                                <p className="text-[8px] font-bold text-secondary-400 uppercase tracking-[0.1em]">Qualifications</p>
+                                                <p className="text-xs font-black text-secondary-900">{selectedTeacher.qualifications || 'Expert Professional'}</p>
                                             </div>
                                         </div>
-                                        <div className="bg-white p-6 rounded-[2rem] border border-secondary-100 shadow-sm flex items-center gap-4 group hover:border-emerald-200 transition-all">
-                                            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:scale-110 transition-transform"><Mail size={24} /></div>
+                                        <div className="bg-white p-4 rounded-[1.25rem] border border-secondary-100 shadow-sm flex items-center gap-3 group hover:border-emerald-200 transition-all">
+                                            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl group-hover:scale-110 transition-transform"><Mail size={20} /></div>
                                             <div>
-                                                <p className="text-[9px] font-bold text-secondary-400 uppercase tracking-[0.1em]">Digital Registry</p>
-                                                <p className="text-xs font-bold text-secondary-600 truncate italic">{selectedTeacher.user?.email}</p>
+                                                <p className="text-[8px] font-bold text-secondary-400 uppercase tracking-[0.1em]">Digital Registry</p>
+                                                <p className="text-[10px] font-bold text-secondary-600 truncate italic">{selectedTeacher.user?.email}</p>
                                             </div>
                                         </div>
-                                        <div className="bg-white p-6 rounded-[2rem] border border-secondary-100 shadow-sm flex items-center gap-4 group hover:border-purple-200 transition-all">
-                                            <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl group-hover:scale-110 transition-transform"><Phone size={24} /></div>
+                                        <div className="bg-white p-4 rounded-[1.25rem] border border-secondary-100 shadow-sm flex items-center gap-3 group hover:border-purple-200 transition-all">
+                                            <div className="p-2.5 bg-purple-50 text-purple-600 rounded-xl group-hover:scale-110 transition-transform"><Phone size={20} /></div>
                                             <div>
-                                                <p className="text-[9px] font-bold text-secondary-400 uppercase tracking-[0.1em]">Secure Line</p>
-                                                <p className="text-sm font-black text-secondary-900">{selectedTeacher.phoneNumber || '+91 XXXXX XXXXX'}</p>
+                                                <p className="text-[8px] font-bold text-secondary-400 uppercase tracking-[0.1em]">Secure Line</p>
+                                                <p className="text-xs font-black text-secondary-900">{selectedTeacher.phoneNumber || '+91 XXXXX XXXXX'}</p>
                                             </div>
                                         </div>
                                     </div>

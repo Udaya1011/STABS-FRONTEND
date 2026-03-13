@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import {
     Users,
     Calendar,
@@ -16,7 +17,9 @@ import {
     Plus,
     X,
     Save,
-    ClipboardList
+    ClipboardList,
+    RefreshCcw,
+    Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getStudents } from '../store/slices/studentSlice';
@@ -147,8 +150,8 @@ const Dashboard = () => {
                     </p>
                 </div>
                 
-                {/* FAST ACCESS BUTTON */}
-                <div className="flex items-center gap-4 w-full lg:w-auto">
+                {/* FAST ACCESS BUTTONS */}
+                <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
                     <button 
                         onClick={() => navigate('/attendance')}
                         className="group flex-1 lg:flex-none bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl shadow-primary-600/30 active:scale-95 transition-all border-b-4 border-primary-800"
@@ -159,23 +162,42 @@ const Dashboard = () => {
                         <span className="whitespace-nowrap">Mark Attendance</span>
                         <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                     </button>
+
+                    {user?.role === 'teacher' && (
+                        <>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const token = user.token;
+                                        const config = { headers: { Authorization: `Bearer ${token}` } };
+                                        toast.loading('Syncing free periods...', { id: 'sync' });
+                                        const res = await axios.post('/api/appointments/sync-slots', {}, config);
+                                        toast.success(res.data.message, { id: 'sync' });
+                                        dispatch(getMyAppointments());
+                                    } catch (err) {
+                                        toast.error(err.response?.data?.message || 'Sync failed', { id: 'sync' });
+                                    }
+                                }}
+                                className="group flex-1 lg:flex-none bg-secondary-900 hover:bg-black text-white px-8 py-4 rounded-[2rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all"
+                            >
+                                <RefreshCcw size={18} className="group-hover:rotate-180 transition-transform duration-500" />
+                                <span className="whitespace-nowrap">Sync All Slots</span>
+                            </button>
+                            <button 
+                                onClick={handleOpenTimetableModal}
+                                className="group flex-1 lg:flex-none bg-white border border-secondary-200 text-secondary-900 px-8 py-4 rounded-[2rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm hover:border-primary-600 hover:text-primary-600 transition-all active:scale-95"
+                            >
+                                <Calendar size={18} /> 
+                                <span className="whitespace-nowrap">My Schedule</span>
+                            </button>
+                        </>
+                    )}
                     
                     <div className="hidden xl:flex items-center gap-2 px-6 py-4 bg-white border border-secondary-100 rounded-[2rem] shadow-sm">
                         <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary-500">Node Sync: 5005</span>
                     </div>
                 </div>
-
-                {user?.role === 'teacher' && (
-                    <div className="flex gap-3">
-                        <button 
-                            onClick={handleOpenTimetableModal}
-                            className="bg-secondary-900 hover:bg-black text-white px-6 py-4 rounded-[2rem] font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-xl"
-                        >
-                            <Calendar size={18} /> Manage My Schedule
-                        </button>
-                    </div>
-                )}
             </div>
 
             {/* Stats Grid */}

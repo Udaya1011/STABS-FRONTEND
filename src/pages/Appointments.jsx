@@ -13,7 +13,7 @@ const Appointments = () => {
     const [selectedSlot, setSelectedSlot] = useState(null);
     const [slotData, setSlotData] = useState({ date: '', startTime: '', endTime: '' });
     const [bookingData, setBookingData] = useState({ reason: '', priority: 'medium', subject: '' });
-    const [showTodayOnly, setShowTodayOnly] = useState(true);
+    const [showTodayOnly, setShowTodayOnly] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [cancelReason, setCancelReason] = useState('');
 
@@ -145,7 +145,7 @@ const Appointments = () => {
                     {(() => {
                         let list = activeTab === 'slots'
                             ? (user?.role === 'teacher'
-                                ? appointments.filter(a => a.appointmentType === 'slot' && a.status !== 'cancelled')
+                                ? appointments.filter(a => a.appointmentType === 'slot' && (a.status === 'available' || a.status === 'cancelled'))
                                 : availableSlots)
                             : filteredAppointments;
 

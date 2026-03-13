@@ -107,17 +107,33 @@ const Chat = () => {
                 }
             };
 
+            console.log('Initiating transmission to /api/upload...');
             const response = await axios.post('/api/upload', formData, config);
             const { url, mimetype, originalName } = response.data;
             
+            const name = (originalName || '').toLowerCase();
+            const audioExts = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.amr', '.flac', '.webm'];
+            const videoExts = ['.mp4', '.mov', '.avi', '.mkv', '.wmv'];
+
             let messageType = 'file';
-            if (mimetype.startsWith('image/')) messageType = 'image';
-            else if (mimetype.startsWith('video/')) messageType = 'video';
-            else if (mimetype.startsWith('audio/')) messageType = 'audio';
-            else if (mimetype.includes('pdf')) messageType = 'file';
-            else if (mimetype.includes('word') || mimetype.includes('officedocument.wordprocessingml')) messageType = 'file';
-            else if (mimetype.includes('excel') || mimetype.includes('officedocument.spreadsheetml')) messageType = 'file';
-            else if (mimetype.includes('presentation') || mimetype.includes('officedocument.presentationml')) messageType = 'file';
+            if (mimetype.startsWith('image/')) {
+                messageType = 'image';
+            } else if (mimetype.startsWith('audio/')) {
+                messageType = 'audio';
+            } else if (audioExts.some(ext => name.endsWith(ext)) && !videoExts.some(ext => name.endsWith(ext))) {
+                // If it has an audio extension and is NOT a common video extension, it's audio
+                messageType = 'audio';
+            } else if (mimetype.startsWith('video/') || videoExts.some(ext => name.endsWith(ext))) {
+                messageType = 'video';
+            } else if (mimetype.includes('pdf')) {
+                messageType = 'file';
+            } else if (mimetype.includes('word') || mimetype.includes('officedocument.wordprocessingml')) {
+                messageType = 'file';
+            } else if (mimetype.includes('excel') || mimetype.includes('officedocument.spreadsheetml')) {
+                messageType = 'file';
+            } else if (mimetype.includes('presentation') || mimetype.includes('officedocument.presentationml')) {
+                messageType = 'file';
+            }
 
             handleSendMessage(null, { 
                 messageType, 
@@ -162,7 +178,9 @@ const Chat = () => {
                     setUploading(true);
                     const token = user?.token;
                     const config = {
-                        headers: { Authorization: `Bearer ${token}` }
+                        headers: { 
+                            Authorization: `Bearer ${token}` 
+                        }
                     };
 
                     const response = await axios.post('/api/upload', formData, config);
@@ -241,7 +259,9 @@ const Chat = () => {
                 setUploading(true);
                 const token = user?.token;
                 const config = {
-                    headers: { Authorization: `Bearer ${token}` }
+                    headers: { 
+                        Authorization: `Bearer ${token}` 
+                    }
                 };
 
                 const response = await axios.post('/api/upload', formData, config);
@@ -524,13 +544,32 @@ const Chat = () => {
                                                 <div className="flex-1 space-y-2">
                                                     <div className="flex justify-between items-center px-1">
                                                         <span className={`text-[10px] font-black uppercase tracking-widest ${isMe ? 'text-white/70' : 'text-primary-600'}`}>Voice Note</span>
-                                                        <span className={`text-[9px] font-bold ${isMe ? 'text-white/50' : 'text-secondary-400'}`}>0:00 / 0:15</span>
                                                     </div>
                                                     <audio 
-                                                        src={msg.fileUrl} 
+                                                        src={getImageUrl(msg.fileUrl)} 
                                                         controls 
-                                                        className={`h-7 w-full scale-95 origin-left ${isMe ? 'filter-white-controls opacity-90' : 'opacity-80'}`}
+                                                        className={`h-8 w-full scale-95 origin-left ${isMe ? 'filter-white-controls' : ''}`}
                                                     />
+                                                </div>
+                                            </div>
+                                        )}
+                                        {msg.messageType === 'video' && (
+                                            <div className="mb-2 rounded-xl overflow-hidden border border-secondary-100 bg-black relative group shadow-sm">
+                                                <video 
+                                                    src={getImageUrl(msg.fileUrl)} 
+                                                    controls 
+                                                    className="w-full h-auto max-h-80 object-contain mx-auto"
+                                                />
+                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <a 
+                                                        href={getImageUrl(msg.fileUrl)} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="p-1.5 bg-black/50 text-white rounded-lg hover:bg-black/70 transition-colors"
+                                                        title="Watch full screen"
+                                                    >
+                                                        <Video size={14} />
+                                                    </a>
                                                 </div>
                                             </div>
                                         )}
