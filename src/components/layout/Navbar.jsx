@@ -250,15 +250,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                         </div>
                     )}
 
-                    <div className="relative group">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary-400 group-focus-within:text-primary-600 transition-colors" size={16} />
-                        <input
-                            type="text"
-                            placeholder={`Search ${getPageInfo().title}...`}
-                            onChange={(e) => window.dispatchEvent(new CustomEvent('global-search', { detail: e.target.value }))}
-                            className="w-48 lg:w-64 bg-secondary-50 border border-secondary-200 rounded-xl py-2 pl-10 pr-4 text-sm font-medium text-secondary-900 placeholder:text-secondary-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm outline-none"
-                        />
-                    </div>
+
 
                     {user?.role === 'admin' && !['Dashboard', 'My Profile', 'Messages'].includes(getPageInfo().title) && (
                         <button
