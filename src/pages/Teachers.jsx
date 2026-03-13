@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Search, Mail, MapPin, Calendar, Star, ChevronLeft, ChevronRight, GraduationCap, Plus, Users, X, Save, Edit2, Trash2, Key, Eye, Info, UserCheck, Layout } from 'lucide-react';
+import { Search, Mail, MapPin, Calendar, Star, ChevronLeft, ChevronRight, GraduationCap, Plus, Users, X, Save, Edit2, Trash2, Key, Eye, Info, UserCheck, Layout, Briefcase, BookOpen, Phone, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getTeachers, updateTeacher, deleteTeacher, registerTeacher } from '../store/slices/teacherSlice';
 import { getDepartments } from '../store/slices/departmentSlice';
@@ -220,16 +220,7 @@ const Teachers = () => {
                                 </tr>
                             ) : filteredTeachers.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="py-20 text-center">
-                                        <div className="flex flex-col items-center">
-                                            <div className="w-12 h-12 border-4 border-primary-100 border-t-primary-600 rounded-full animate-spin mb-4"></div>
-                                            <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest">Synchronizing directory...</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : filteredTeachers.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" className="py-20 text-center">
+                                    <td colSpan="7" className="py-20 text-center">
                                         <div className="flex flex-col items-center">
                                             <div className="w-16 h-16 bg-secondary-50 text-secondary-200 rounded-full flex items-center justify-center mb-4 border border-secondary-100"><Users size={32} /></div>
                                             <h3 className="text-xl font-bold text-secondary-900 uppercase tracking-tight">Access Controlled Cluster</h3>
@@ -441,108 +432,101 @@ const Teachers = () => {
                             animate={{ x: 0 }}
                             exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="relative w-full max-w-4xl bg-white h-[600px] my-auto mr-8 shadow-2xl rounded-[2.5rem] overflow-hidden border border-secondary-100"
+                            className="relative w-full max-w-lg bg-white h-screen shadow-2xl overflow-y-auto"
                         >
-                            <div className="h-full flex flex-col sm:flex-row">
-                                {/* Left Side: Image + Action */}
-                                <div className="w-full sm:w-[350px] bg-secondary-50 p-10 flex flex-col items-center justify-center space-y-8 border-r border-secondary-100">
-                                    <div className="relative group">
-                                        <div className="absolute -inset-4 bg-gradient-to-tr from-primary-500 to-primary-100 rounded-[3rem] opacity-20 group-hover:opacity-30 transition-opacity blur-xl"></div>
-                                        <img
-                                            src={getImageUrl(selectedTeacher.user?.avatar)}
-                                            alt={selectedTeacher.user?.name}
-                                            className="w-56 h-72 object-cover rounded-[2rem] shadow-2xl relative z-10 border-4 border-white grayscale group-hover:grayscale-0 transition-all duration-500"
-                                        />
+                            <div className="p-8 space-y-8">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-primary-600 text-white rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
+                                            <UserCheck size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-2xl font-black text-secondary-900 uppercase tracking-tight">{selectedTeacher.user?.name}</h3>
+                                            <p className="text-xs font-black text-primary-600 uppercase tracking-[0.2em]">{selectedTeacher.designation || 'FAUCLTY'}</p>
+                                        </div>
                                     </div>
-
-                                    <button className="w-full py-4 bg-[#800000] text-white rounded-xl font-bold text-xs uppercase tracking-[0.2em] shadow-lg shadow-red-900/20 active:scale-95 transition-all">
-                                        View Profile
+                                    <button onClick={() => setShowSidePanel(false)} className="p-2 text-secondary-400 hover:text-secondary-900 rounded-xl transition-all">
+                                        <X size={24} strokeWidth={3} />
                                     </button>
                                 </div>
 
-                                {/* Right Side: Details */}
-                                <div className="flex-1 p-12 flex flex-col justify-center relative bg-white">
-                                    <button
-                                        onClick={() => setShowSidePanel(false)}
-                                        className="absolute top-6 right-6 p-2 text-secondary-400 hover:text-secondary-900 rounded-full hover:bg-secondary-50 transition-all"
-                                    >
-                                        <X size={24} strokeWidth={3} />
-                                    </button>
-
-                                    <div className="space-y-10">
-                                        <div>
-                                            <h3 className="text-4xl font-black text-secondary-900 tracking-tight leading-tight uppercase">
-                                                {selectedTeacher.user?.name}
-                                            </h3>
-                                            <div className="h-1 w-20 bg-primary-600 mt-4 rounded-full"></div>
+                                <div className="relative group mx-auto w-fit">
+                                    <div className="absolute -inset-6 bg-gradient-to-tr from-[#800000] to-red-100 rounded-full opacity-20 group-hover:opacity-30 transition-opacity blur-2xl"></div>
+                                    <div className="w-52 h-52 overflow-hidden rounded-full shadow-2xl relative z-10 border-[6px] border-[#800000] p-1.5 bg-white transition-transform duration-500 group-hover:scale-105">
+                                        <div className="w-full h-full rounded-full overflow-hidden bg-secondary-50">
+                                            {selectedTeacher.user?.avatar && !selectedTeacher.user.avatar.includes('default.png') ? (
+                                                <img 
+                                                    src={getImageUrl(selectedTeacher.user.avatar)} 
+                                                    alt={selectedTeacher.user.name} 
+                                                    className="w-full h-full object-cover" 
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-5xl font-black text-[#800000] uppercase">
+                                                    {selectedTeacher.user?.name?.charAt(0)}
+                                                </div>
+                                            )}
                                         </div>
+                                    </div>
+                                    <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-full shadow-lg border-4 border-[#800000] z-20 flex items-center justify-center text-[#800000]">
+                                        <UserCheck size={18} />
+                                    </div>
+                                </div>
 
-                                        <div className="space-y-6">
-                                            <div className="flex items-start gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0 border border-orange-100">
-                                                    <Briefcase size={20} />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest">Designation</p>
-                                                    <p className="text-lg font-bold text-secondary-800 tracking-tight">{selectedTeacher.designation || 'Faculty Member'}</p>
-                                                </div>
+                                <div className="space-y-6">
+                                    <div className="bg-secondary-50/50 rounded-[2rem] p-8 border border-secondary-100">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="w-2 h-2 bg-primary-600 rounded-full animate-pulse"></div>
+                                            <h4 className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.2em]">Professional Matrix</h4>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest">Department</p>
+                                                <p className="text-sm font-bold text-secondary-900">{selectedTeacher.user?.department?.name || 'General Batch'}</p>
                                             </div>
-
-                                            <div className="flex items-start gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-                                                    <BookOpen size={20} />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest">Qualification</p>
-                                                    <p className="text-md font-bold text-secondary-700 leading-snug">{selectedTeacher.qualifications || 'Expert Professional'}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-start gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                                                    <Mail size={20} />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest">E-Mail ID</p>
-                                                    <p className="text-md font-bold text-secondary-700 select-all">{selectedTeacher.user?.email}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-start gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100">
-                                                    <Phone size={20} />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest">Contact Number</p>
-                                                    <p className="text-md font-bold text-secondary-700">{selectedTeacher.phoneNumber || '9952XXXXXX'}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-start gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center shrink-0 border border-pink-100">
-                                                    <Award size={20} />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest">Area Of Specialization</p>
-                                                    <p className="text-md font-bold text-secondary-800">{selectedTeacher.specialization || 'Academic Research'}</p>
-                                                </div>
+                                            <div className="space-y-1">
+                                                <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest">Specialization</p>
+                                                <p className="text-sm font-bold text-secondary-900">{selectedTeacher.specialization || 'Academic Research'}</p>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div className="flex gap-4 pt-4">
-                                            <button
-                                                onClick={() => { handleOpenTimetableModal(selectedTeacher); setShowSidePanel(false); }}
-                                                className="flex-1 py-4 px-6 bg-secondary-900 text-white rounded-2xl font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-primary-600 transition-all shadow-xl shadow-secondary-900/10 flex items-center justify-center gap-2"
-                                            >
-                                                <Calendar size={16} /> Timetable
-                                            </button>
-                                            <button
-                                                onClick={() => { handleOpenModal(selectedTeacher); setShowSidePanel(false); }}
-                                                className="flex-1 py-4 px-6 border-2 border-secondary-100 text-secondary-600 rounded-2xl font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-secondary-50 hover:text-secondary-900 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <Edit2 size={16} /> Edit Data
-                                            </button>
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div className="bg-white p-6 rounded-[2rem] border border-secondary-100 shadow-sm flex items-center gap-4 group hover:border-primary-200 transition-all">
+                                            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl group-hover:scale-110 transition-transform"><BookOpen size={24} /></div>
+                                            <div>
+                                                <p className="text-[9px] font-bold text-secondary-400 uppercase tracking-[0.1em]">Qualifications</p>
+                                                <p className="text-sm font-black text-secondary-900">{selectedTeacher.qualifications || 'Expert Professional'}</p>
+                                            </div>
                                         </div>
+                                        <div className="bg-white p-6 rounded-[2rem] border border-secondary-100 shadow-sm flex items-center gap-4 group hover:border-emerald-200 transition-all">
+                                            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:scale-110 transition-transform"><Mail size={24} /></div>
+                                            <div>
+                                                <p className="text-[9px] font-bold text-secondary-400 uppercase tracking-[0.1em]">Digital Registry</p>
+                                                <p className="text-xs font-bold text-secondary-600 truncate italic">{selectedTeacher.user?.email}</p>
+                                            </div>
+                                        </div>
+                                        <div className="bg-white p-6 rounded-[2rem] border border-secondary-100 shadow-sm flex items-center gap-4 group hover:border-purple-200 transition-all">
+                                            <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl group-hover:scale-110 transition-transform"><Phone size={24} /></div>
+                                            <div>
+                                                <p className="text-[9px] font-bold text-secondary-400 uppercase tracking-[0.1em]">Secure Line</p>
+                                                <p className="text-sm font-black text-secondary-900">{selectedTeacher.phoneNumber || '+91 XXXXX XXXXX'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-8 space-y-4">
+                                        <button 
+                                            onClick={() => { handleOpenTimetableModal(selectedTeacher); setShowSidePanel(false); }}
+                                            className="w-full py-4 bg-primary-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-primary-700 transition-all shadow-xl shadow-primary-600/20 active:scale-95 flex items-center justify-center gap-3"
+                                        >
+                                            <Calendar size={16} /> Access Duty Timetable
+                                        </button>
+                                        <button 
+                                            onClick={() => { handleOpenModal(selectedTeacher); setShowSidePanel(false); }}
+                                            className="w-full py-4 bg-secondary-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-secondary-900/20 active:scale-95 flex items-center justify-center gap-3"
+                                        >
+                                            <Edit2 size={16} /> Sync Profile Node
+                                        </button>
                                     </div>
                                 </div>
                             </div>

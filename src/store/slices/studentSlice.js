@@ -62,7 +62,10 @@ export const studentSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            .addCase(getStudents.pending, (state) => { state.isLoading = true; })
+            .addCase(getStudents.pending, (state) => { 
+                state.isLoading = true; 
+                state.students = []; // Clear old data to prevent UI flickering
+            })
             .addCase(getStudents.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.students = action.payload;

@@ -15,7 +15,9 @@ import {
     ArrowLeft,
     GraduationCap,
     Clock,
-    Save
+    Save,
+    Eye,
+    ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getSubjects } from '../store/slices/subjectSlice';
@@ -33,21 +35,40 @@ const Attendance = () => {
     const { isLoading: attendanceLoading, isSuccess, isError, message, studentHistory, subjectHistory } = useSelector((state) => state.attendance);
 
     const [selectedDepartment, setSelectedDepartment] = useState('');
+    const [selectedYear, setSelectedYear] = useState('');
+    const [selectedSemester, setSelectedSemester] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [slot, setSlot] = useState('09:00 - 10:00');
     const [attendanceList, setAttendanceList] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState('mark'); // 'mark' or 'history'
+    const [selectedDetailRecord, setSelectedDetailRecord] = useState(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
 
+    // Clear dependent states when high-level config changes
     useEffect(() => {
         setSelectedSubject('');
-    }, [selectedDepartment]);
+    }, [selectedDepartment, selectedYear, selectedSemester]);
+
+    useEffect(() => {
+        console.log('--- Attendance State Log ---');
+        console.log('View:', viewMode);
+        console.log('Selection:', { selectedDepartment, selectedYear, selectedSemester, selectedSubject });
+    }, [viewMode, selectedDepartment, selectedYear, selectedSemester, selectedSubject]);
 
     const filteredSubjects = subjects.filter(sub => {
         const depId = sub.department?._id || sub.department;
-        return !selectedDepartment || depId === selectedDepartment;
+        const depMatch = !selectedDepartment || depId === selectedDepartment;
+        const semMatch = !selectedSemester || String(sub.semester) === String(selectedSemester);
+        const yearMatch = !selectedYear || String(sub.year) === String(selectedYear);
+        return depMatch && semMatch && yearMatch;
     });
+
+    const markAll = (status) => {
+        setAttendanceList(prev => prev.map(item => ({ ...item, status })));
+        toast.success(`Marked all as ${status}`);
+    };
 
     const isAuthorized = ['admin', 'teacher', 'staff'].includes(user?.role);
     const isStudent = user?.role === 'student';
@@ -63,11 +84,19 @@ const Attendance = () => {
     // Fetch students when subject changes
     useEffect(() => {
         if (selectedSubject && isAuthorized) {
-            dispatch(getStudents(`subjectId=${selectedSubject}`));
+            const queryParts = [`subjectId=${selectedSubject}`];
+            if (selectedDepartment) queryParts.push(`department=${selectedDepartment}`);
+            if (selectedYear) queryParts.push(`year=${selectedYear}`);
+            if (selectedSemester) queryParts.push(`semester=${selectedSemester}`);
+            
+            const fullQuery = queryParts.join('&');
+            console.log('Dispatching getStudents with query:', fullQuery);
+            dispatch(getStudents(fullQuery));
         } else {
+            console.log('Clearing selection or unauthorized - ignoring student fetch');
             setAttendanceList([]);
         }
-    }, [dispatch, selectedSubject, isAuthorized]);
+    }, [dispatch, selectedSubject, isAuthorized, selectedDepartment, selectedYear, selectedSemester]);
 
     // Fetch history when subject changes or viewMode changes
     useEffect(() => {
@@ -90,22 +119,34 @@ const Attendance = () => {
         }
     }, [isError, isSuccess, message, dispatch]);
 
+    // Clear roster ONLY when subject selection is actually cleared, not just during loading
+    useEffect(() => {
+        if (!selectedSubject) {
+            setAttendanceList([]);
+        }
+    }, [selectedSubject]);
+
     // Update attendance list when allStudents changes
     useEffect(() => {
-        if (selectedSubject && Array.isArray(allStudents)) {
-            setAttendanceList(allStudents.map(s => ({
+        if (selectedSubject && Array.isArray(allStudents) && allStudents.length > 0) {
+            console.log('Mapping Students to Roster:', allStudents.length);
+            const roster = allStudents.map(s => ({
                 studentId: s._id,
-                name: s.user?.name || 'N/A',
-                registerNumber: s.registerNumber,
+                name: s.user?.name || s.name || 'Unknown Student',
+                registerNumber: s.registerNumber || 'NO-REG',
                 status: 'Present'
-            })));
+            }));
+            setAttendanceList(roster);
+        } else if (selectedSubject && Array.isArray(allStudents) && allStudents.length === 0 && !studentsLoading) {
+            // Only set to empty if loading is finished and result is truly 0
+            setAttendanceList([]);
         }
-    }, [allStudents, selectedSubject]);
+    }, [allStudents, selectedSubject, studentsLoading]);
 
-    const handleStatusToggle = (studentId) => {
+    const handleStatusToggle = (studentId, status) => {
         setAttendanceList(prev => prev.map(item => 
             item.studentId === studentId 
-                ? { ...item, status: item.status === 'Present' ? 'Absent' : 'Present' }
+                ? { ...item, status }
                 : item
         ));
     };
@@ -304,221 +345,260 @@ const Attendance = () => {
             </div>
 
             {viewMode === 'mark' ? (
-                <div className="flex flex-col md:flex-row gap-6 md:items-start">
-                    {/* Left Sidebar: Programmes Navigator */}
-                    <aside className="w-full md:w-72 lg:w-80 flex-shrink-0 md:sticky md:top-8">
-                        <div className="glass-premium p-5 rounded-[2rem] bg-white border border-secondary-100 shadow-premium">
-                            <div className="flex items-center gap-3 mb-6 px-2">
-                                <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600">
-                                    <GraduationCap size={20} />
-                                </div>
-                                <h3 className="text-lg font-black text-secondary-900 tracking-tight">Programmes</h3>
+                <div className="space-y-8 animate-enter">
+                    {/* Selection Console */}
+                    <div className="glass-premium p-8 rounded-[2.5rem] bg-white border border-secondary-100 shadow-premium space-y-8">
+                        <div className="flex items-center gap-4 border-b border-secondary-50 pb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600">
+                                <GraduationCap size={24} />
                             </div>
-                            
-                            <div className="space-y-1.5 max-h-[calc(100vh-250px)] overflow-y-auto pr-1 custom-scrollbar">
-                                {departments.map((dep) => (
-                                    <button
-                                        key={dep._id}
-                                        onClick={() => setSelectedDepartment(dep._id)}
-                                        className={`w-full text-left px-4 py-3.5 rounded-xl font-bold transition-all flex items-center justify-between group ${
-                                            selectedDepartment === dep._id
-                                                ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20'
-                                                : 'bg-transparent text-secondary-500 hover:bg-secondary-50 border border-transparent'
-                                        }`}
-                                    >
-                                        <div className="flex flex-col truncate">
-                                            <span className="truncate text-sm">{dep.programme || dep.name}</span>
-                                            {dep.code && (
-                                                <span className={`text-[10px] font-medium ${selectedDepartment === dep._id ? 'text-primary-100' : 'text-secondary-400'}`}>
-                                                    {dep.code}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <ChevronRight 
-                                            size={16} 
-                                            className={`transition-all ${selectedDepartment === dep._id ? 'translate-x-1 opacity-100' : 'opacity-0 -translate-x-2'}`} 
-                                        />
-                                    </button>
-                                ))}
+                            <div>
+                                <h2 className="text-xl font-black text-secondary-900 leading-none">Context Selection</h2>
+                                <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-[0.2em] mt-2">Configure academic parameters for the session</p>
                             </div>
                         </div>
-                    </aside>
 
-                    {/* Right Side: Primary Content Area */}
-                    <div className="flex-1 w-full space-y-6">
-                        {/* Status/Filters Bar */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-white p-5 rounded-[2rem] border border-secondary-100 shadow-sm">
-                            <div className="space-y-1.5 px-1">
-                                <label className="text-[10px] font-black text-secondary-400 uppercase tracking-widest ml-1">Subject</label>
-                                <div className="relative group">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400 group-focus-within:text-primary-600 transition-colors">
-                                        <BookOpen size={17} />
-                                    </span>
-                                    <select
-                                        value={selectedSubject}
-                                        onChange={(e) => setSelectedSubject(e.target.value)}
-                                        className="w-full pl-11 pr-4 py-2.5 bg-secondary-50/50 border border-secondary-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-600/5 focus:border-primary-600/30 transition-all font-medium text-sm appearance-none cursor-pointer"
-                                    >
-                                        <option value="">Select Subject</option>
-                                        {filteredSubjects.map(subject => (
-                                            <option key={subject._id} value={subject._id}>{subject.name} ({subject.code})</option>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                            {/* Academic Scope */}
+                            <div className="space-y-6">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Academic Year</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[1, 2, 3, 4].map(year => (
+                                            <button 
+                                                key={year}
+                                                onClick={() => setSelectedYear(String(year))}
+                                                className={`px-6 py-2.5 rounded-xl font-bold transition-all border-2 ${
+                                                    selectedYear === String(year) 
+                                                    ? 'bg-primary-600 border-primary-600 text-white shadow-lg' 
+                                                    : 'bg-white border-secondary-50 text-secondary-400 hover:border-primary-200 hover:text-primary-600'
+                                                }`}
+                                            >
+                                                Year {year}
+                                            </button>
                                         ))}
-                                    </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Semester Cycle</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                                            <button 
+                                                key={sem}
+                                                onClick={() => setSelectedSemester(String(sem))}
+                                                className={`w-11 h-11 rounded-xl font-black transition-all border-2 text-sm ${
+                                                    selectedSemester === String(sem) 
+                                                    ? 'bg-primary-600 border-primary-600 text-white shadow-lg' 
+                                                    : 'bg-white border-secondary-50 text-secondary-400 hover:border-primary-200'
+                                                }`}
+                                            >
+                                                {sem}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-1.5 px-1">
-                                <label className="text-[10px] font-black text-secondary-400 uppercase tracking-widest ml-1">Date</label>
-                                <div className="relative group">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400 group-focus-within:text-primary-600 transition-colors">
-                                        <Calendar size={17} />
-                                    </span>
-                                    <input
-                                        type="date"
-                                        value={date}
-                                        onChange={(e) => setDate(e.target.value)}
-                                        className="w-full pl-11 pr-4 py-2.5 bg-secondary-50/50 border border-secondary-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-600/5 focus:border-primary-600/30 transition-all font-medium text-sm"
-                                    />
+                            {/* Department & Subject */}
+                            <div className="space-y-6">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Department</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {departments.map((dep) => (
+                                            <button
+                                                key={dep._id}
+                                                onClick={() => setSelectedDepartment(dep._id)}
+                                                className={`px-4 py-3 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all border-2 text-center ${
+                                                    selectedDepartment === dep._id
+                                                        ? 'bg-secondary-900 border-secondary-900 text-white shadow-xl'
+                                                        : 'bg-white border-secondary-50 text-secondary-400 hover:border-secondary-100'
+                                                }`}
+                                            >
+                                                {dep.programme || dep.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Active Subject</label>
+                                    <div className="relative group">
+                                        <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400" size={18} />
+                                        <select
+                                            value={selectedSubject}
+                                            onChange={(e) => setSelectedSubject(e.target.value)}
+                                            className="w-full h-14 pl-12 pr-4 bg-secondary-50/50 border-2 border-transparent focus:border-primary-600 focus:bg-white rounded-2xl transition-all font-black text-secondary-800 text-xs uppercase appearance-none cursor-pointer"
+                                        >
+                                            <option value="">Select Domain Module</option>
+                                            {filteredSubjects.map(sub => (
+                                                <option key={sub._id} value={sub._id}>{sub.name} ({sub.code})</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-1.5 px-1">
-                                <label className="text-[10px] font-black text-secondary-400 uppercase tracking-widest ml-1">Time Slot</label>
-                                <div className="relative group">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400 group-focus-within:text-primary-600 transition-colors">
-                                        <Clock size={17} />
-                                    </span>
-                                    <select
-                                        value={slot}
-                                        onChange={(e) => setSlot(e.target.value)}
-                                        className="w-full pl-11 pr-4 py-2.5 bg-secondary-50/50 border border-secondary-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-600/5 focus:border-primary-600/30 transition-all font-medium text-sm cursor-pointer appearance-none"
-                                    >
-                                        <option>09:00 - 10:00</option>
-                                        <option>10:00 - 11:00</option>
-                                        <option>11:15 - 12:15</option>
-                                        <option>12:15 - 01:15</option>
-                                        <option>02:00 - 03:00</option>
-                                        <option>03:00 - 04:00</option>
-                                    </select>
+                            {/* Date & Slot */}
+                            <div className="space-y-6">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Session Date</label>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400" size={18} />
+                                        <input 
+                                            type="date"
+                                            value={date}
+                                            onChange={(e) => setDate(e.target.value)}
+                                            className="w-full h-14 pl-12 pr-10 bg-secondary-50/50 border-2 border-transparent focus:border-primary-600 focus:bg-white rounded-2xl transition-all font-black text-secondary-900"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="flex items-end px-1">
-                                <button 
-                                    onClick={handleSubmit}
-                                    disabled={attendanceLoading || attendanceList.length === 0}
-                                    className="w-full bg-primary-600 hover:bg-primary-700 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {attendanceLoading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                                    <span>Submit</span>
-                                </button>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest ml-1">Time Block</label>
+                                    <div className="relative">
+                                        <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400" size={18} />
+                                        <select
+                                            value={slot}
+                                            onChange={(e) => setSlot(e.target.value)}
+                                            className="w-full h-14 pl-12 pr-10 bg-secondary-50/50 border-2 border-transparent focus:border-primary-600 focus:bg-white rounded-2xl transition-all font-black text-secondary-900 text-xs uppercase appearance-none cursor-pointer"
+                                        >
+                                            <option>09:00 - 10:00</option>
+                                            <option>10:00 - 11:00</option>
+                                            <option>11:15 - 12:15</option>
+                                            <option>12:15 - 01:15</option>
+                                            <option>02:00 - 03:00</option>
+                                            <option>03:00 - 04:00</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Main Student Roster Card */}
-                        <div className="glass-premium rounded-[2rem] bg-white border border-secondary-100 shadow-premium overflow-hidden">
-                            <div className="p-6 md:p-8 border-b border-secondary-100 flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white/80 backdrop-blur-xl">
-                                <div>
-                                    <h2 className="text-xl font-extra-black text-secondary-900 tracking-tight">Student Roster</h2>
-                                    <p className="text-secondary-400 font-bold text-xs uppercase tracking-wider mt-0.5">
-                                        {selectedSubject ? 'Mark participation for enrolled students' : 'Select a subject to load roster'}
-                                    </p>
+                    {/* Student Roster Section */}
+                    {selectedSubject && (
+                        <div className="space-y-6 anim-enter">
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-3xl border border-secondary-100 shadow-sm">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                                        <CheckCircle2 size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-secondary-900 tracking-tight leading-none">Verification Roster</h3>
+                                        <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mt-1.5">{attendanceList.length} Students Synchronized</p>
+                                    </div>
                                 </div>
-                                
-                                {selectedSubject && (
+
+                                <div className="flex items-center gap-3">
+                                    <button onClick={() => markAll('Present')} className="px-5 py-2.5 bg-green-50 text-green-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-100 transition-all">Mark All Present</button>
+                                    <button onClick={() => markAll('Absent')} className="px-5 py-2.5 bg-red-50 text-red-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all">Mark All Absent</button>
+                                    <div className="w-px h-10 bg-secondary-100 mx-2"></div>
+                                    <button 
+                                        onClick={handleSubmit} 
+                                        disabled={attendanceLoading}
+                                        className="px-8 py-3 bg-primary-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] shadow-xl shadow-primary-500/30 hover:bg-primary-700 transition-all flex items-center gap-2"
+                                    >
+                                        {attendanceLoading ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
+                                        Submit Engagement
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-[2.5rem] border border-secondary-100 shadow-premium overflow-hidden">
+                                <div className="p-8 border-b border-secondary-50 bg-secondary-50/30 flex items-center justify-between">
                                     <div className="relative flex-1 max-w-md">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400" size={18} />
                                         <input
                                             type="text"
-                                            placeholder="Quick student lookup..."
+                                            placeholder="Search active identity..."
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full pl-11 pr-4 py-3 bg-secondary-50/50 border border-secondary-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-600/5 focus:border-primary-600/30 transition-all font-medium text-sm"
+                                            className="w-full pl-12 pr-4 py-3.5 bg-white border border-secondary-100 rounded-2xl focus:ring-4 focus:ring-primary-500/10 transition-all font-bold text-sm"
                                         />
                                     </div>
-                                )}
-                            </div>
+                                    <div className="flex gap-4">
+                                        <div className="px-6 py-2 bg-secondary-50 rounded-xl text-center">
+                                            <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest">Present</p>
+                                            <p className="text-base font-black text-green-600">{attendanceList.filter(a => a.status === 'Present').length}</p>
+                                        </div>
+                                        <div className="px-6 py-2 bg-secondary-50 rounded-xl text-center">
+                                            <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest">Absent</p>
+                                            <p className="text-base font-black text-red-600">{attendanceList.filter(a => a.status === 'Absent').length}</p>
+                                        </div>
+                                    </div>
+                                </div>
 
-                            {selectedSubject ? (
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left">
-                                        <thead className="bg-secondary-50/50">
-                                            <tr>
-                                                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-secondary-400">Student Info</th>
-                                                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-secondary-400">Reg. Number</th>
-                                                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-secondary-400 text-center">Current Status</th>
-                                                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-secondary-400 text-right">Quick Mark</th>
+                                        <thead>
+                                            <tr className="bg-secondary-50/50">
+                                                <th className="px-10 py-5 text-[10px] font-black text-secondary-400 uppercase tracking-widest">Student Information</th>
+                                                <th className="px-10 py-5 text-[10px] font-black text-secondary-400 uppercase tracking-widest">Registry ID</th>
+                                                <th className="px-10 py-5 text-[10px] font-black text-secondary-400 uppercase tracking-widest text-center">Visual Status</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-secondary-100 bg-white">
+                                        <tbody className="divide-y divide-secondary-50">
                                             {studentsLoading ? (
                                                 <tr>
-                                                    <td colSpan="4" className="px-8 py-20 text-center">
-                                                        <div className="flex flex-col items-center gap-4">
-                                                            <Loader2 size={32} className="text-primary-600 animate-spin" />
-                                                            <p className="text-secondary-500 font-black text-sm uppercase tracking-widest">Refreshing Data...</p>
-                                                        </div>
+                                                    <td colSpan="3" className="px-10 py-24 text-center">
+                                                        <Loader2 size={32} className="text-primary-600 animate-spin mx-auto mb-3" />
+                                                        <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest">Synchronizing Student Data...</p>
                                                     </td>
                                                 </tr>
                                             ) : filteredList.length > 0 ? (
-                                                <AnimatePresence mode='popLayout'>
-                                                    {filteredList.map((student) => (
-                                                        <motion.tr 
-                                                            layout
-                                                            initial={{ opacity: 0, y: 10 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            key={student.studentId} 
-                                                            className="group hover:bg-primary-50/30 transition-all cursor-pointer"
-                                                            onClick={() => handleStatusToggle(student.studentId)}
-                                                        >
-                                                            <td className="px-8 py-4">
-                                                                <div className="flex items-center gap-4">
-                                                                    <div className="w-10 h-10 rounded-xl bg-secondary-100 flex items-center justify-center text-secondary-500 font-black text-xs group-hover:bg-white transition-all shadow-sm">
-                                                                        {student.name.charAt(0)}
-                                                                    </div>
-                                                                    <p className="font-bold text-secondary-900 group-hover:text-primary-600 transition-colors uppercase tracking-tight text-sm">{student.name}</p>
+                                                filteredList.map((student) => (
+                                                    <tr 
+                                                        key={student.studentId} 
+                                                        className="group hover:bg-primary-50/30 transition-all"
+                                                    >
+                                                        <td className="px-10 py-5">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black transition-all ${student.status === 'Present' ? 'bg-green-100 text-green-700 shadow-sm' : 'bg-red-50 text-red-400'}`}>
+                                                                    {student.name.charAt(0)}
                                                                 </div>
-                                                            </td>
-                                                            <td className="px-8 py-4">
-                                                                <span className="font-mono font-black text-secondary-600 text-[11px] py-1 px-2.5 bg-secondary-50 rounded-lg border border-secondary-100 group-hover:bg-white transition-all">
-                                                                    {student.registerNumber}
-                                                                </span>
-                                                            </td>
-                                                            <td className="px-8 py-4">
-                                                                <div className="flex justify-center">
-                                                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm transition-all border ${
+                                                                <span className="font-black text-secondary-800 uppercase tracking-tight text-sm tracking-tighter">{student.name}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-10 py-5">
+                                                            <span className="font-mono font-black text-secondary-500 bg-secondary-50 px-4 py-2 rounded-xl border border-secondary-100 text-[11px]">
+                                                                {student.registerNumber}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-10 py-5">
+                                                            <div className="flex justify-center gap-3">
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleStatusToggle(student.studentId, 'Present'); }}
+                                                                    className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all border-2 ${
                                                                         student.status === 'Present' 
-                                                                            ? 'bg-green-100 text-green-600 border-green-200' 
-                                                                            : 'bg-red-100 text-red-600 border-red-200'
-                                                                    }`}>
-                                                                        {student.status}
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-8 py-4 text-right">
-                                                                <div className="flex justify-end gap-2">
-                                                                    <div className={`p-2 rounded-lg transition-all shadow-sm ${student.status === 'Present' ? 'bg-green-600 text-white' : 'bg-secondary-50 text-secondary-300'}`}>
-                                                                        <CheckCircle2 size={16} />
-                                                                    </div>
-                                                                    <div className={`p-2 rounded-lg transition-all shadow-sm ${student.status === 'Absent' ? 'bg-red-600 text-white' : 'bg-secondary-50 text-secondary-300'}`}>
-                                                                        <XCircle size={16} />
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                        </motion.tr>
-                                                    ))}
-                                                </AnimatePresence>
+                                                                        ? 'bg-green-500 text-white border-green-600 shadow-lg shadow-green-500/30' 
+                                                                        : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                                                                    }`}
+                                                                >
+                                                                    <CheckCircle2 size={14} />
+                                                                    Present
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleStatusToggle(student.studentId, 'Absent'); }}
+                                                                    className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all border-2 ${
+                                                                        student.status === 'Absent' 
+                                                                        ? 'bg-red-500 text-white border-red-600 shadow-lg shadow-red-500/30' 
+                                                                        : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                                                                    }`}
+                                                                >
+                                                                    <XCircle size={14} />
+                                                                    Absent
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
                                             ) : (
                                                 <tr>
-                                                    <td colSpan="4" className="px-8 py-20 text-center">
-                                                        <div className="flex flex-col items-center gap-4 opacity-50">
-                                                            <div className="w-16 h-16 rounded-3xl bg-secondary-50 flex items-center justify-center text-secondary-400">
-                                                                <User size={32} />
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <p className="text-secondary-900 font-black text-base">Roster Empty</p>
-                                                                <p className="text-secondary-500 text-xs max-w-[280px] font-medium">No students are currently enrolled in this subject.</p>
-                                                            </div>
+                                                    <td colSpan="3" className="px-10 py-24 text-center">
+                                                        <div className="opacity-30 flex flex-col items-center">
+                                                            <User size={48} className="mb-4 text-secondary-300" />
+                                                            <p className="text-secondary-900 font-extrabold text-sm uppercase tracking-widest">No Active Enrollment Found</p>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -526,17 +606,9 @@ const Attendance = () => {
                                         </tbody>
                                     </table>
                                 </div>
-                            ) : (
-                                <div className="py-28 flex flex-col items-center justify-center text-center px-8">
-                                    <div className="w-20 h-20 bg-primary-50 text-primary-600 rounded-[2rem] flex items-center justify-center mb-6 animate-pulse shadow-inner">
-                                        <BookOpen size={32} />
-                                    </div>
-                                    <h3 className="text-xl font-black text-secondary-900 mb-2">Subject Selection Required</h3>
-                                    <p className="text-secondary-500 max-w-xs font-medium text-sm leading-relaxed">Please select a subject from the controls above to load the student roster for today's session.</p>
-                                </div>
-                            )}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             ) : (
                 <div className="space-y-6">
@@ -567,6 +639,7 @@ const Attendance = () => {
                                             <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-secondary-400">Total Students</th>
                                             <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-secondary-400">Present</th>
                                             <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-secondary-400">Attendance %</th>
+                                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-secondary-400 text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-secondary-100">
@@ -576,7 +649,7 @@ const Attendance = () => {
                                             const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
                                             
                                             return (
-                                                <tr key={record._id} className="hover:bg-secondary-50/30 transition-colors">
+                                                <tr key={record._id} className="hover:bg-secondary-50/30 transition-colors group">
                                                     <td className="px-8 py-5 font-bold text-secondary-900">
                                                         {new Date(record.date).toLocaleDateString(undefined, {
                                                             weekday: 'short',
@@ -608,12 +681,24 @@ const Attendance = () => {
                                                             <span className="font-black text-secondary-900 text-sm">{percentage}%</span>
                                                         </div>
                                                     </td>
+                                                    <td className="px-8 py-5 text-right">
+                                                        <button 
+                                                            onClick={() => {
+                                                                setSelectedDetailRecord(record);
+                                                                setShowDetailModal(true);
+                                                            }}
+                                                            className="p-2 text-primary-600 bg-primary-50 hover:bg-primary-600 hover:text-white rounded-lg transition-all border border-primary-100 shadow-sm"
+                                                            title="View Roster"
+                                                        >
+                                                            <Eye size={16} />
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             );
                                         })}
                                         {subjectHistory.length === 0 && (
                                             <tr>
-                                                <td colSpan="5" className="px-8 py-20 text-center">
+                                                <td colSpan="6" className="px-8 py-20 text-center">
                                                     <div className="flex flex-col items-center gap-4 opacity-50">
                                                         <Calendar size={40} className="text-secondary-300" />
                                                         <p className="text-secondary-900 font-black text-base">No History Records</p>
@@ -637,6 +722,69 @@ const Attendance = () => {
                     </div>
                 </div>
             )}
+
+            {/* Detailed History Modal */}
+            <AnimatePresence>
+                {showDetailModal && selectedDetailRecord && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowDetailModal(false)}
+                            className="absolute inset-0 bg-secondary-950/40 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-2xl bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh] border border-secondary-100"
+                        >
+                            <div className="px-8 py-6 bg-secondary-50 border-b border-secondary-100 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-primary-600 text-white rounded-2xl flex items-center justify-center shadow-lg">
+                                        <ClipboardList size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-black text-secondary-900 uppercase">Session Roster</h3>
+                                        <p className="text-xs font-bold text-secondary-400">
+                                            {new Date(selectedDetailRecord.date).toLocaleDateString()} at {selectedDetailRecord.slot}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowDetailModal(false)} className="text-secondary-400 hover:text-secondary-900 font-bold uppercase text-xs">✕</button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-8 space-y-2">
+                                {selectedDetailRecord.students?.map((item, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-4 bg-white border border-secondary-50 rounded-2xl hover:bg-secondary-50/50 transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center font-bold text-xs">
+                                                {item.student?.user?.name?.charAt(0) || '?'}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-secondary-900">{item.student?.user?.name || 'Academic Record'}</p>
+                                                <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest">{item.student?.registerNumber}</p>
+                                            </div>
+                                        </div>
+                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                            item.status === 'Present' 
+                                            ? 'bg-green-100 text-green-700 border border-green-200' 
+                                            : 'bg-red-100 text-red-700 border border-red-200'
+                                        }`}>
+                                            {item.status}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="px-8 py-6 bg-secondary-50 border-t border-secondary-100 flex justify-end">
+                                <button onClick={() => setShowDetailModal(false)} className="px-8 py-3 bg-secondary-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all shadow-lg">Close Details</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
