@@ -108,7 +108,7 @@ const Login = () => {
                                     name="email"
                                     type="text"
                                     className="input-field pl-12"
-                                    placeholder="email or username"
+                                    placeholder="Email or Register Number"
                                     value={email}
                                     onChange={onChange}
                                     required

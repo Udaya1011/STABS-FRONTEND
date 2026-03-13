@@ -28,7 +28,10 @@ const Students = () => {
     const { user } = useSelector((state) => state.auth);
 
     useEffect(() => {
-        dispatch(getStudents());
+        // Only fetch students if admin or teacher
+        if (user?.role === 'admin' || user?.role === 'teacher') {
+            dispatch(getStudents());
+        }
         dispatch(getDepartments());
 
         // Global Navbar Events

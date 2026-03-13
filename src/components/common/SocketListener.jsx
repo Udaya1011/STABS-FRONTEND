@@ -234,9 +234,18 @@ const SocketListener = () => {
     // Initial fetch for unread counts and contacts when user logs in
     useEffect(() => {
         if (user) {
+            // Unread counts are always relevant
             dispatch(getUnreadCounts());
-            dispatch(getTeachers());
-            dispatch(getStudents());
+            
+            // Only fetch what you are authorized to see to avoid 403 redirects
+            if (user.role === 'admin') {
+                dispatch(getTeachers());
+                dispatch(getStudents());
+            } else if (user.role === 'student') {
+                dispatch(getTeachers()); // Students can see teachers to message them
+            } else if (user.role === 'teacher') {
+                dispatch(getStudents()); // Teachers can see students
+            }
         }
     }, [user, dispatch]);
 

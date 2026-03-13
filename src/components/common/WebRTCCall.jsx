@@ -71,13 +71,16 @@ const WebRTCCall = () => {
         socketRef.current = s;
 
         s.on('connect', () => {
+            console.log('RTC Socket Connected:', s.id);
             s.emit('join', user._id);
         });
         s.emit('join', user._id);
 
         s.on('rtc-offer', async ({ from, offer, senderName, callType: incomingType }) => {
+            console.log('Incoming RTC Offer from:', from, senderName, 'Type:', incomingType);
             // GUARD: ignore if we're already in a call
             if (callStateRef.current !== 'idle') {
+                console.log('Currently busy, rejecting offer from:', from);
                 s.emit('rtc-end', { to: from });
                 return;
             }
@@ -351,9 +354,17 @@ const WebRTCCall = () => {
 
     // Expose startCall to window for Chat.jsx to trigger
     useEffect(() => {
-        window.initiateCall = (targetUser, type = 'voice') => startCall(targetUser, type);
-        return () => delete window.initiateCall;
-    }, [socket]);
+        const handler = (targetUser, type = 'voice') => {
+            console.log('Global Initiate Call Triggered:', targetUser.id, type);
+            startCall(targetUser, type);
+        };
+        window.initiateCall = handler;
+        return () => {
+            if (window.initiateCall === handler) {
+                delete window.initiateCall;
+            }
+        };
+    }, [user, socket]);
 
     if (callState === 'idle') return null;
 

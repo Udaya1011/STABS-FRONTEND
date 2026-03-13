@@ -55,11 +55,17 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
-        dispatch(getStudents());
+        // Only fetch students if admin or teacher (regular students can't fetch all students)
+        if (user?.role === 'admin' || user?.role === 'teacher') {
+            dispatch(getStudents());
+        }
+        
+        // Teachers list is public to all authenticated users
         dispatch(getTeachers());
         dispatch(getSubjects());
         dispatch(getDepartments());
         dispatch(getMyAppointments());
+        
         if (user?.role === 'teacher') {
             dispatch(getMyProfile());
             dispatch(syncMyFreeSlots()).then(() => {

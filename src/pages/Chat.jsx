@@ -45,10 +45,16 @@ const Chat = () => {
             dispatch(reset()); // Clear messages from previous contact
             dispatch(getMessages(userId));
         }
+
+        // Only fetch students if admin or teacher
+        if (user?.role === 'admin' || user?.role === 'teacher') {
+            dispatch(getStudents());
+        }
+        
+        // Teachers list is public for all authenticated users
         dispatch(getTeachers());
-        dispatch(getStudents());
         dispatch(getUnreadCounts());
-    }, [userId, dispatch]);
+    }, [userId, dispatch, user?.role]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -101,6 +107,7 @@ const Chat = () => {
                 }
             };
 
+            const response = await axios.post('/api/upload', formData, config);
             const { url, mimetype, originalName } = response.data;
             
             let messageType = 'file';

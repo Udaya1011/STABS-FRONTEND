@@ -34,9 +34,16 @@ const setupAxios = () => {
     axios.interceptors.response.use(
         (response) => response,
         (error) => {
+            if (error.response?.status === 401) {
+                console.warn('Unauthorized request - Clearing session');
+                localStorage.removeItem('user');
+                // Optional: redirect to login if not already there
+                if (!window.location.pathname.includes('/login')) {
+                    window.location.href = '/login';
+                }
+            }
             if (error.message === 'Network Error') {
                 console.error('Critical Network Error - Check Backend URL and CORS');
-                // We're in a utility, so we use console.error, but the slices will catch this and toast it
             }
             return Promise.reject(error);
         }

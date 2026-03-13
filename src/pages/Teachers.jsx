@@ -47,9 +47,12 @@ const Teachers = () => {
     const { user } = useSelector((state) => state.auth);
 
     useEffect(() => {
-        dispatch(getTeachers());
-        dispatch(getDepartments());
-        dispatch(getSubjects());
+        // Teachers list is public but requires auth
+        if (user) {
+            dispatch(getTeachers());
+            dispatch(getDepartments());
+            dispatch(getSubjects());
+        }
 
         // Global Navbar Events
         const handleSearch = (e) => setSearchQuery(e.detail);

@@ -17,16 +17,16 @@ import Attendance from './pages/Attendance';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
 import SocketListener from './components/common/SocketListener';
+import WebRTCCall from './components/common/WebRTCCall';
 
 function App() {
   const { user } = useSelector((state) => state.auth);
-
-
 
   return (
     <Router>
       <div className="min-h-screen bg-secondary-50">
         <SocketListener />
+        <WebRTCCall />
         <Routes>
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
           <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
