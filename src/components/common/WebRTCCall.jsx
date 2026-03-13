@@ -43,10 +43,17 @@ const WebRTCCall = () => {
     }, []);
 
     const stopAllRingtones = () => {
-        receiverRingtone.current.pause();
-        receiverRingtone.current.currentTime = 0;
-        callerRingtone.current.pause();
-        callerRingtone.current.currentTime = 0;
+        try {
+            receiverRingtone.current.pause();
+            receiverRingtone.current.currentTime = 0;
+            receiverRingtone.current.volume = 0; // Absolute silence
+            
+            callerRingtone.current.pause();
+            callerRingtone.current.currentTime = 0;
+            callerRingtone.current.volume = 0;
+        } catch (e) {
+            console.log('Error stopping ringtones:', e);
+        }
     };
 
     const configuration = {
@@ -135,6 +142,7 @@ const WebRTCCall = () => {
     }, [user?._id]);
 
     const startTimer = () => {
+        if (timerRef.current) clearInterval(timerRef.current);
         setDuration(0);
         timerRef.current = setInterval(() => {
             setDuration(prev => prev + 1);
@@ -176,6 +184,11 @@ const WebRTCCall = () => {
     };
 
     const startCall = async (targetUser, type = 'voice') => {
+        if (callStateRef.current !== 'idle') {
+            console.log('Call ignored: already in a state of', callStateRef.current);
+            return;
+        }
+        
         try {
             setPartner(targetUser);
             setCallType(type);
@@ -183,6 +196,7 @@ const WebRTCCall = () => {
             setIsCaller(true);
             
             stopAllRingtones();
+            callerRingtone.current.volume = 1;
             callerRingtone.current.play().catch(e => console.log('Caller ringtone failed:', e));
 
             // Auto-end after 60 seconds if not answered
@@ -227,6 +241,9 @@ const WebRTCCall = () => {
     };
 
     const answerCall = async () => {
+        stopAllRingtones();
+        if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current);
+        
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === 'video' });
             localStream.current = stream;
@@ -269,15 +286,19 @@ const WebRTCCall = () => {
     };
 
     const endCallLocally = () => {
+        stopAllRingtones();
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current);
+
         if (isCaller && partner) {
-            if (duration > 0 || callState === 'connected') {
+            if (duration > 0 || callStateRef.current === 'connected') {
                 dispatch(sendMessage({
                     receiver: partner.id,
                     content: `Direct ${callType} call ended • Duration: ${formatTime(duration)}`,
                     messageType: 'call',
                     fileUrl: null
                 }));
-            } else if (callState === 'calling' || callState === 'ringing') {
+            } else if (callStateRef.current === 'calling' || callStateRef.current === 'ringing') {
                 dispatch(sendMessage({
                     receiver: partner.id,
                     content: `Missed direct ${callType} call`,
@@ -292,18 +313,19 @@ const WebRTCCall = () => {
             localStream.current = null;
         }
         if (peerConnection.current) {
-            peerConnection.current.close();
+            try { peerConnection.current.close(); } catch(e) {}
             peerConnection.current = null;
         }
-        remoteAudio.current.srcObject = null;
+        
+        try {
+            remoteAudio.current.pause();
+            remoteAudio.current.srcObject = null;
+        } catch(e) {}
+        
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
         if (localVideoRef.current) localVideoRef.current.srcObject = null;
         remoteStreamRef.current = null;
         
-        stopAllRingtones();
-
-        clearInterval(timerRef.current);
-        clearTimeout(ringTimeoutRef.current);
         setCallState('idle');
         setPartner(null);
         setDuration(0);
