@@ -57,8 +57,17 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
 
             <motion.aside
                 initial={false}
-                animate={{ width: isCollapsed ? '80px' : '20vw' }}
-                className={`fixed left-0 top-0 h-screen bg-white text-secondary-600 flex flex-col z-40 transition-transform md:translate-x-0 duration-300 ${isCollapsed ? '-translate-x-full' : 'translate-x-0'} border-r border-secondary-100`}
+                animate={{
+                    width: isCollapsed ? '0px' : '280px',
+                    x: 0
+                }}
+                transition={{
+                    type: 'spring',
+                    stiffness: 70,
+                    damping: 26,
+                    mass: 1.2
+                }}
+                className={`fixed left-0 top-0 h-screen bg-white text-secondary-600 flex flex-col z-40 md:translate-x-0 border-r border-secondary-100 shadow-2xl overflow-hidden`}
             >
                 {/* Sidebar Header - Highlighted */}
                 <div className="p-6 flex items-center justify-between bg-primary-600 border-b border-primary-700">
@@ -81,7 +90,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 {/* Toggle Arrow Button */}
                 <button
                     onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="absolute -right-3 top-20 w-6 h-6 bg-white text-secondary-400 hover:text-primary-600 rounded-full hidden md:flex items-center justify-center group z-50 transition-colors"
+                    className="absolute -right-3 top-20 w-6 h-6 bg-white text-secondary-400 hover:text-primary-600 rounded-full flex items-center justify-center group z-50" // Removed 'hidden md:flex'
                 >
                     {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
                 </button>

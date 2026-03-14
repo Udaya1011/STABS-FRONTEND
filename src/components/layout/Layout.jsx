@@ -7,12 +7,23 @@ import WebRTCCall from '../common/WebRTCCall';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Layout = () => {
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(true);
 
     return (
-        <div className="flex min-h-screen relative">
+        <div className="flex min-h-screen relative overflow-x-hidden">
             <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
-            <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 w-full ${isCollapsed ? 'md:ml-[80px]' : 'md:ml-[20vw]'}`}>
+            <motion.div
+                animate={{
+                    marginLeft: isCollapsed ? '0px' : '280px'
+                }}
+                transition={{
+                    type: 'spring',
+                    stiffness: 70,
+                    damping: 26,
+                    mass: 1.2
+                }}
+                className="flex-1 flex flex-col min-w-0 w-full"
+            >
                 <Navbar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
                 <main className="flex-1 p-6 md:px-8 md:py-8 w-full flex flex-col min-h-0">
                     <AnimatePresence mode="wait">
@@ -28,7 +39,7 @@ const Layout = () => {
                         </motion.div>
                     </AnimatePresence>
                 </main>
-            </div>
+            </motion.div>
             <PortalNavigator />
             <WebRTCCall />
         </div>

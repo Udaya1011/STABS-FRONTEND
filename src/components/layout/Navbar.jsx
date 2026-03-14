@@ -88,9 +88,19 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
         <nav className="h-24 px-4 md:px-6 flex items-center justify-between sticky top-0 z-20 bg-white/70 backdrop-blur-md border-b border-secondary-100 transition-colors duration-300">
             <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="md:hidden p-2 -ml-2 mr-2 text-secondary-500 hover:bg-secondary-50 rounded-xl transition-colors"
+                className="p-2 -ml-2 mr-4 text-secondary-500 hover:bg-secondary-50 hover:text-primary-600 rounded-xl transition-all duration-300 active:scale-95 shadow-sm border border-secondary-50 flex items-center justify-center bg-white"
             >
-                <Menu size={24} />
+                <motion.div
+                    animate={{ rotate: isCollapsed ? 0 : 180 }}
+                    transition={{
+                        type: 'spring',
+                        stiffness: 70,
+                        damping: 26,
+                        mass: 1.2
+                    }}
+                >
+                    <Menu size={24} />
+                </motion.div>
             </button>
 
             <div className="hidden md:flex flex-1 items-center">
@@ -116,7 +126,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                 className={`p-2 rounded-xl transition-all ${showDeptStats ? 'bg-primary-50 text-primary-600' : 'text-secondary-500 hover:bg-secondary-50 border border-transparent'}`}
                                 title="Department Statistics"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bar-chart-2"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bar-chart-2"><line x1="18" x2="18" y1="20" y2="10" /><line x1="12" x2="12" y1="20" y2="4" /><line x1="6" x2="6" y1="20" y2="14" /></svg>
                             </button>
 
                             <AnimatePresence>
@@ -154,15 +164,15 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
 
                     {location.pathname.startsWith('/students') && (
                         <div className="flex items-center gap-2">
-                             {/* Semester Dropdown */}
-                             <div className="relative">
+                            {/* Semester Dropdown */}
+                            <div className="relative">
                                 <button
                                     onClick={() => setActiveDropdown(activeDropdown === 'sem' ? null : 'sem')}
                                     className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeDropdown === 'sem' ? 'border-primary-600 bg-primary-50 text-primary-600' : 'border-primary-100 bg-secondary-50 text-secondary-600 hover:bg-primary-50 hover:border-primary-300'}`}
                                 >
                                     <span>Sems: {selectedFilters.sem === 'all' ? 'All' : selectedFilters.sem}</span>
                                     <motion.div animate={{ rotate: activeDropdown === 'sem' ? 180 : 0 }}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                                     </motion.div>
                                 </button>
                                 <AnimatePresence>
@@ -175,9 +185,9 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                                 className="absolute top-full mt-2 left-0 w-32 bg-white rounded-2xl shadow-2xl border border-secondary-100 overflow-hidden z-50 p-1.5"
                                             >
-                                                <button onClick={() => { setSelectedFilters({...selectedFilters, sem: 'all'}); window.dispatchEvent(new CustomEvent('semester-filter', { detail: 'all' })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">All Semesters</button>
+                                                <button onClick={() => { setSelectedFilters({ ...selectedFilters, sem: 'all' }); window.dispatchEvent(new CustomEvent('semester-filter', { detail: 'all' })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">All Semesters</button>
                                                 {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
-                                                    <button key={s} onClick={() => { setSelectedFilters({...selectedFilters, sem: s}); window.dispatchEvent(new CustomEvent('semester-filter', { detail: s })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">Semester {s}</button>
+                                                    <button key={s} onClick={() => { setSelectedFilters({ ...selectedFilters, sem: s }); window.dispatchEvent(new CustomEvent('semester-filter', { detail: s })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">Semester {s}</button>
                                                 ))}
                                             </motion.div>
                                         </>
@@ -193,7 +203,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                 >
                                     <span>Year: {selectedFilters.year === 'all' ? 'All' : selectedFilters.year}</span>
                                     <motion.div animate={{ rotate: activeDropdown === 'year' ? 180 : 0 }}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                                     </motion.div>
                                 </button>
                                 <AnimatePresence>
@@ -206,9 +216,9 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                                 className="absolute top-full mt-2 left-0 w-36 bg-white rounded-2xl shadow-2xl border border-secondary-100 overflow-hidden z-50 p-1.5"
                                             >
-                                                <button onClick={() => { setSelectedFilters({...selectedFilters, year: 'all'}); window.dispatchEvent(new CustomEvent('year-filter', { detail: 'all' })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">All Years</button>
+                                                <button onClick={() => { setSelectedFilters({ ...selectedFilters, year: 'all' }); window.dispatchEvent(new CustomEvent('year-filter', { detail: 'all' })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">All Years</button>
                                                 {[...new Set(students.map(s => s.academicYear))].filter(Boolean).sort().map(y => (
-                                                    <button key={y} onClick={() => { setSelectedFilters({...selectedFilters, year: y}); window.dispatchEvent(new CustomEvent('year-filter', { detail: y })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">{y}</button>
+                                                    <button key={y} onClick={() => { setSelectedFilters({ ...selectedFilters, year: y }); window.dispatchEvent(new CustomEvent('year-filter', { detail: y })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">{y}</button>
                                                 ))}
                                             </motion.div>
                                         </>
@@ -226,13 +236,13 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                             >
                                 <span>{selectedFilters.dept === 'all' ? 'Course: All' : (
                                     location.pathname.startsWith('/teachers') ? selectedFilters.dept : (
-                                        departments.find(d => d._id === selectedFilters.dept) 
-                                        ? `${departments.find(d => d._id === selectedFilters.dept).name} ${Array.isArray(departments.find(d => d._id === selectedFilters.dept).className) ? departments.find(d => d._id === selectedFilters.dept).className.join(' ') : (departments.find(d => d._id === selectedFilters.dept).className || '')}`.trim()
-                                        : 'Selection'
+                                        departments.find(d => d._id === selectedFilters.dept)
+                                            ? `${departments.find(d => d._id === selectedFilters.dept).name} ${Array.isArray(departments.find(d => d._id === selectedFilters.dept).className) ? departments.find(d => d._id === selectedFilters.dept).className.join(' ') : (departments.find(d => d._id === selectedFilters.dept).className || '')}`.trim()
+                                            : 'Selection'
                                     )
                                 )}</span>
                                 <motion.div animate={{ rotate: activeDropdown === 'dept' ? 180 : 0 }}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                                 </motion.div>
                             </button>
                             <AnimatePresence>
@@ -245,18 +255,18 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                             className="absolute top-full mt-2 left-0 w-48 bg-white rounded-2xl shadow-2xl border border-secondary-100 overflow-hidden z-50 p-1.5"
                                         >
-                                            <button onClick={() => { setSelectedFilters({...selectedFilters, dept: 'all'}); window.dispatchEvent(new CustomEvent('department-filter', { detail: 'all' })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">
+                                            <button onClick={() => { setSelectedFilters({ ...selectedFilters, dept: 'all' }); window.dispatchEvent(new CustomEvent('department-filter', { detail: 'all' })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">
                                                 {location.pathname.startsWith('/teachers') ? 'All Courses' : 'All Divisions'}
                                             </button>
                                             {location.pathname.startsWith('/teachers') ? (
                                                 [...new Set(departments?.map(d => d.name))].filter(Boolean).sort().map(courseName => (
-                                                    <button key={courseName} onClick={() => { setSelectedFilters({...selectedFilters, dept: courseName}); window.dispatchEvent(new CustomEvent('department-filter', { detail: courseName })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">
+                                                    <button key={courseName} onClick={() => { setSelectedFilters({ ...selectedFilters, dept: courseName }); window.dispatchEvent(new CustomEvent('department-filter', { detail: courseName })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">
                                                         {courseName}
                                                     </button>
                                                 ))
                                             ) : (
                                                 departments?.map(dep => (
-                                                    <button key={dep._id} onClick={() => { setSelectedFilters({...selectedFilters, dept: dep._id}); window.dispatchEvent(new CustomEvent('department-filter', { detail: dep._id })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">
+                                                    <button key={dep._id} onClick={() => { setSelectedFilters({ ...selectedFilters, dept: dep._id }); window.dispatchEvent(new CustomEvent('department-filter', { detail: dep._id })); setActiveDropdown(null); }} className="w-full text-left px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-primary-50 hover:text-primary-600 transition-colors">
                                                         {dep.programme ? `${dep.programme} ${dep.name} ${Array.isArray(dep.className) ? dep.className.join(' ') : (dep.className || '')}`.trim() : dep.name}
                                                     </button>
                                                 ))
@@ -367,7 +377,7 @@ const Navbar = ({ isCollapsed, setIsCollapsed }) => {
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex justify-between items-start gap-2">
                                                                     <p className="text-[11px] font-bold text-secondary-800 leading-tight line-clamp-2">{n.message}</p>
-                                                                     {!n.isRead && <div className="w-2 h-2 bg-primary-600 rounded-full flex-shrink-0 mt-1"></div>}
+                                                                    {!n.isRead && <div className="w-2 h-2 bg-primary-600 rounded-full flex-shrink-0 mt-1"></div>}
                                                                 </div>
                                                                 <div className="flex items-center gap-1.5 mt-1">
                                                                     <Clock size={10} className="text-secondary-300" />
