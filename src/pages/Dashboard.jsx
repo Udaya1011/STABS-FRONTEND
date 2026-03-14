@@ -23,7 +23,9 @@ import {
     User,
     Sparkles,
     ExternalLink,
-    Code
+    Code,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getStudents } from '../store/slices/studentSlice';
@@ -52,6 +54,7 @@ const Dashboard = () => {
     const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
     const [showDateTimetable, setShowDateTimetable] = useState(false);
     const [daySchedule, setDaySchedule] = useState([]);
+    const [currentAppointmentIndex, setCurrentAppointmentIndex] = useState(0);
 
     const generateEmptySchedule = () => {
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -68,6 +71,17 @@ const Dashboard = () => {
             slots: defaultTimes.map(time => ({ ...time, isBooked: false, subject: '' }))
         }));
     };
+
+    const upcomingAppointments = [...appointments]
+        .filter(a => {
+            const appointmentDate = new Date(a.date);
+            appointmentDate.setHours(0, 0, 0, 0);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return (a.status === 'pending' || a.status === 'approved') && appointmentDate >= today;
+        })
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(0, 5);
 
     useEffect(() => {
         if (user?.role === 'admin' || user?.role === 'teacher') {
@@ -89,6 +103,12 @@ const Dashboard = () => {
             dispatch(getStudentAttendance(user._id));
         }
     }, [dispatch, user]);
+
+    useEffect(() => {
+        if (currentAppointmentIndex >= upcomingAppointments.length) {
+            setCurrentAppointmentIndex(0);
+        }
+    }, [upcomingAppointments.length]);
 
     const handleOpenTimetableModal = () => {
         if (!currentTeacherProfile) {
@@ -136,16 +156,6 @@ const Dashboard = () => {
         { id: 'departments', name: 'Courses', value: departments.length, icon: Building2, color: 'text-amber-600', bgColor: 'bg-amber-50', trend: 'Global', trendUp: true, roles: ['admin', 'student', 'teacher'], data: departments },
     ].filter(stat => !stat.roles || stat.roles.includes(user?.role));
 
-    const upcomingAppointments = [...appointments]
-        .filter(a => {
-            const appointmentDate = new Date(a.date);
-            appointmentDate.setHours(0, 0, 0, 0);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            return (a.status === 'pending' || a.status === 'approved') && appointmentDate >= today;
-        })
-        .sort((a, b) => new Date(a.date) - new Date(b.date))
-        .slice(0, 5);
 
     const handleUpdateStatus = (id, status) => {
         dispatch(updateAppointmentStatus({ id, statusData: { status } }))
@@ -347,42 +357,99 @@ const Dashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                {upcomingAppointments.length > 0 ? upcomingAppointments.map((app) => (
-                                    <div key={app._id} className="flex flex-wrap sm:flex-nowrap items-center gap-4 p-4 rounded-3xl border border-secondary-50 bg-secondary-50/30 hover:bg-white hover:border-primary-200 hover:shadow-xl hover:shadow-primary-500/5 transition-all duration-300 group/item">
-                                        <div className="flex flex-col items-center justify-center w-full sm:w-20 py-2 px-3 bg-white rounded-2xl shadow-sm border border-secondary-100 group-hover/item:border-primary-100">
-                                            <span className="text-[10px] font-black text-secondary-400 uppercase">{new Date(app.date).toLocaleDateString([], { month: 'short' })}</span>
-                                            <span className="text-xl font-black text-secondary-900 leading-none">{new Date(app.date).toLocaleDateString([], { day: '2-digit' })}</span>
-                                        </div>
-                                        <div className="flex-1 min-w-[150px]">
-                                            <h4 className="font-black text-secondary-800 text-xs uppercase tracking-tight line-clamp-1">{app.reason || 'Academic Consultation'}</h4>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
-                                                <p className="text-[9px] font-bold text-secondary-500 uppercase tracking-widest leading-none">
-                                                    {user?.role === 'teacher' ? `Student: ${app.student?.name || 'User'}` : `Faculty: ${app.teacher?.name || 'Staff'}`}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="w-full sm:w-auto flex justify-end">
-                                            {user?.role === 'teacher' && app.status === 'pending' ? (
-                                                <button
-                                                    onClick={() => handleUpdateStatus(app._id, 'approved')}
-                                                    className="px-8 py-3 bg-primary-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20 active:scale-95 whitespace-nowrap"
-                                                >
-                                                    Authorize
-                                                </button>
-                                            ) : (
-                                                <div className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 border ${app.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
-                                                    <div className={`w-1 h-1 rounded-full ${app.status === 'approved' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-                                                    {app.status}
+                            <div className="relative">
+                                {upcomingAppointments.length > 0 ? (
+                                    <div className="space-y-6">
+                                        <AnimatePresence mode="wait">
+                                            <motion.div
+                                                key={upcomingAppointments[currentAppointmentIndex]?._id}
+                                                initial={{ opacity: 0, x: 20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0, x: -20 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="flex flex-wrap sm:flex-nowrap items-center gap-6 p-6 rounded-[2.5rem] border-2 border-secondary-50 bg-secondary-50/30 hover:bg-white hover:border-primary-200 hover:shadow-2xl hover:shadow-primary-500/10 transition-all duration-300 group/item relative overflow-hidden"
+                                            >
+                                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover/item:bg-primary-500/10 transition-colors"></div>
+                                                
+                                                <div className="flex flex-col items-center justify-center w-full sm:w-24 py-4 px-3 bg-white rounded-3xl shadow-sm border border-secondary-100 group-hover/item:border-primary-100 transition-colors relative z-10">
+                                                    <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest">{new Date(upcomingAppointments[currentAppointmentIndex].date).toLocaleDateString([], { month: 'short' })}</span>
+                                                    <span className="text-3xl font-black text-secondary-900 leading-none mt-1">{new Date(upcomingAppointments[currentAppointmentIndex].date).toLocaleDateString([], { day: '2-digit' })}</span>
                                                 </div>
-                                            )}
-                                        </div>
+                                                
+                                                <div className="flex-1 min-w-[200px] relative z-10">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="px-2 py-0.5 bg-primary-100 text-primary-600 text-[8px] font-black uppercase tracking-widest rounded-md">
+                                                            {upcomingAppointments[currentAppointmentIndex].status}
+                                                        </span>
+                                                        <span className="text-[8px] font-bold text-secondary-300 uppercase tracking-widest">#{upcomingAppointments[currentAppointmentIndex]?._id?.slice(-6)}</span>
+                                                    </div>
+                                                    <h4 className="font-black text-secondary-900 text-lg uppercase tracking-tight line-clamp-1">{upcomingAppointments[currentAppointmentIndex].reason || 'Academic Consultation'}</h4>
+                                                    <div className="flex items-center gap-2 mt-2">
+                                                        <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
+                                                        <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-[0.15em] leading-none">
+                                                            {user?.role === 'teacher' ? `Student: ${upcomingAppointments[currentAppointmentIndex].student?.name || 'User'}` : `Faculty: ${upcomingAppointments[currentAppointmentIndex].teacher?.name || 'Staff'}`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="w-full sm:w-auto flex justify-end relative z-10">
+                                                    {user?.role === 'teacher' && upcomingAppointments[currentAppointmentIndex].status === 'pending' ? (
+                                                        <button
+                                                            onClick={() => handleUpdateStatus(upcomingAppointments[currentAppointmentIndex]._id, 'approved')}
+                                                            className="px-8 py-4 bg-primary-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-primary-700 transition-all shadow-xl shadow-primary-500/20 active:scale-95 whitespace-nowrap flex items-center gap-2"
+                                                        >
+                                                            <CheckCircle2 size={16} />
+                                                            Authorize
+                                                        </button>
+                                                    ) : (
+                                                        <div className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-3 border ${upcomingAppointments[currentAppointmentIndex].status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                                                            <div className={`w-2 h-2 rounded-full ${upcomingAppointments[currentAppointmentIndex].status === 'approved' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                                                            {upcomingAppointments[currentAppointmentIndex].status}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        </AnimatePresence>
+
+                                        {upcomingAppointments.length > 1 && (
+                                            <div className="flex items-center justify-between pt-2">
+                                                <div className="flex gap-1.5">
+                                                    {upcomingAppointments.map((_, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            onClick={() => setCurrentAppointmentIndex(idx)}
+                                                            className={`h-1.5 transition-all duration-300 rounded-full ${idx === currentAppointmentIndex ? 'w-8 bg-primary-600' : 'w-2 bg-secondary-200 hover:bg-secondary-300'}`}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => setCurrentAppointmentIndex(prev => (prev === 0 ? upcomingAppointments.length - 1 : prev - 1))}
+                                                        className="p-3 bg-white border border-secondary-100 rounded-2xl text-secondary-400 hover:text-primary-600 hover:border-primary-200 hover:shadow-lg transition-all active:scale-90"
+                                                    >
+                                                        <ChevronLeft size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setCurrentAppointmentIndex(prev => (prev === upcomingAppointments.length - 1 ? 0 : prev + 1))}
+                                                        className="p-3 bg-primary-600 text-white rounded-2xl hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all active:scale-90"
+                                                    >
+                                                        <ChevronRight size={18} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                )) : (
-                                    <div className="py-16 text-center bg-secondary-50/50 rounded-[2.5rem] border border-dashed border-secondary-200">
-                                        <Calendar className="mx-auto text-secondary-200 mb-4 opacity-50" size={48} />
-                                        <p className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.3em]">No Active Sessions Detected</p>
+                                ) : (
+                                    <div className="py-20 text-center bg-secondary-50/50 rounded-[3rem] border-2 border-dashed border-secondary-200 relative overflow-hidden">
+                                        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/50 pointer-events-none"></div>
+                                        <Calendar className="mx-auto text-secondary-200 mb-6 opacity-40" size={56} />
+                                        <p className="text-[12px] font-black text-secondary-400 uppercase tracking-[0.4em]">No Active Sessions Detected</p>
+                                        <button 
+                                            onClick={() => navigate(user?.role === 'student' ? '/teachers' : '/appointments')}
+                                            className="mt-6 text-[10px] font-black text-primary-600 uppercase tracking-[0.2em] hover:text-primary-700 transition-colors"
+                                        >
+                                            Schedule Session Node +
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -402,33 +469,83 @@ const Dashboard = () => {
                                     <Clock size={20} />
                                 </div>
                             </div>
-                            <div className="space-y-4 relative z-10">
-                                {upcomingAppointments.length > 0 ? upcomingAppointments.map((app) => (
-                                    <div key={app._id} className="flex flex-wrap sm:flex-nowrap items-center gap-4 p-4 rounded-3xl border border-secondary-50 bg-secondary-50/30 hover:bg-white hover:border-primary-200 hover:shadow-xl hover:shadow-primary-500/5 transition-all duration-300 group/item">
-                                        <div className="flex flex-col items-center justify-center w-full sm:w-20 py-2 px-3 bg-white rounded-2xl shadow-sm border border-secondary-100 group-hover/item:border-primary-100">
-                                            <span className="text-[10px] font-black text-secondary-400 uppercase">{new Date(app.date).toLocaleDateString([], { month: 'short' })}</span>
-                                            <span className="text-xl font-black text-secondary-900 leading-none">{new Date(app.date).toLocaleDateString([], { day: '2-digit' })}</span>
-                                        </div>
-                                        <div className="flex-1 min-w-[150px]">
-                                            <h4 className="font-black text-secondary-800 text-xs uppercase tracking-tight line-clamp-1">{app.reason || 'Consultation Node'}</h4>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <div className="w-1.5 h-1.5 bg-primary-500 rounded-full"></div>
-                                                <p className="text-[9px] font-bold text-secondary-500 uppercase tracking-widest leading-none">
-                                                    T: {app.teacher?.name} | S: {app.student?.name}
-                                                </p>
+                            <div className="relative">
+                                {upcomingAppointments.length > 0 ? (
+                                    <div className="space-y-6">
+                                        <AnimatePresence mode="wait">
+                                            <motion.div
+                                                key={upcomingAppointments[currentAppointmentIndex]?._id}
+                                                initial={{ opacity: 0, x: 20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0, x: -20 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="flex flex-wrap sm:flex-nowrap items-center gap-6 p-6 rounded-[2.5rem] border-2 border-secondary-50 bg-secondary-50/30 hover:bg-white hover:border-primary-200 hover:shadow-2xl hover:shadow-primary-500/10 transition-all duration-300 group/item relative overflow-hidden"
+                                            >
+                                                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover/item:bg-amber-500/10 transition-colors"></div>
+                                                
+                                                <div className="flex flex-col items-center justify-center w-full sm:w-24 py-4 px-3 bg-white rounded-3xl shadow-sm border border-secondary-100 group-hover/item:border-primary-100 transition-colors relative z-10">
+                                                    <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest">{new Date(upcomingAppointments[currentAppointmentIndex].date).toLocaleDateString([], { month: 'short' })}</span>
+                                                    <span className="text-3xl font-black text-secondary-900 leading-none mt-1">{new Date(upcomingAppointments[currentAppointmentIndex].date).toLocaleDateString([], { day: '2-digit' })}</span>
+                                                </div>
+                                                
+                                                <div className="flex-1 min-w-[200px] relative z-10">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="px-2 py-0.5 bg-amber-100 text-amber-600 text-[8px] font-black uppercase tracking-widest rounded-md">
+                                                            {upcomingAppointments[currentAppointmentIndex].status}
+                                                        </span>
+                                                        <span className="text-[8px] font-bold text-secondary-300 uppercase tracking-widest">#{upcomingAppointments[currentAppointmentIndex]?._id?.slice(-6)}</span>
+                                                    </div>
+                                                    <h4 className="font-black text-secondary-900 text-lg uppercase tracking-tight line-clamp-1">{upcomingAppointments[currentAppointmentIndex].reason || 'Consultation Node'}</h4>
+                                                    <div className="flex items-center gap-2 mt-2">
+                                                        <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                                                        <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-[0.15em] leading-none">
+                                                            T: {upcomingAppointments[currentAppointmentIndex].teacher?.name} | S: {upcomingAppointments[currentAppointmentIndex].student?.name}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="w-full sm:w-auto flex justify-end relative z-10">
+                                                    <div className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-3 border ${upcomingAppointments[currentAppointmentIndex].status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                                                        <div className={`w-2 h-2 rounded-full ${upcomingAppointments[currentAppointmentIndex].status === 'approved' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                                                        {upcomingAppointments[currentAppointmentIndex].status}
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        </AnimatePresence>
+
+                                        {upcomingAppointments.length > 1 && (
+                                            <div className="flex items-center justify-between pt-2">
+                                                <div className="flex gap-1.5">
+                                                    {upcomingAppointments.map((_, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            onClick={() => setCurrentAppointmentIndex(idx)}
+                                                            className={`h-1.5 transition-all duration-300 rounded-full ${idx === currentAppointmentIndex ? 'w-8 bg-amber-500' : 'w-2 bg-secondary-200 hover:bg-secondary-300'}`}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => setCurrentAppointmentIndex(prev => (prev === 0 ? upcomingAppointments.length - 1 : prev - 1))}
+                                                        className="p-3 bg-white border border-secondary-100 rounded-2xl text-secondary-400 hover:text-amber-600 hover:border-amber-200 hover:shadow-lg transition-all active:scale-90"
+                                                    >
+                                                        <ChevronLeft size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setCurrentAppointmentIndex(prev => (prev === upcomingAppointments.length - 1 ? 0 : prev + 1))}
+                                                        className="p-3 bg-amber-500 text-white rounded-2xl hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all active:scale-90"
+                                                    >
+                                                        <ChevronRight size={18} />
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="w-full sm:w-auto flex justify-end">
-                                            <div className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 border ${app.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
-                                                <div className={`w-1 h-1 rounded-full ${app.status === 'approved' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-                                                {app.status}
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
-                                )) : (
-                                    <div className="py-16 text-center bg-secondary-50/50 rounded-[2.5rem] border border-dashed border-secondary-200">
-                                        <CheckCircle2 className="mx-auto text-emerald-400 mb-4 opacity-80" size={48} />
-                                        <p className="text-[10px] font-black text-secondary-400 uppercase tracking-[0.3em]">No Pending Requests</p>
+                                ) : (
+                                    <div className="py-20 text-center bg-secondary-50/50 rounded-[3rem] border-2 border-dashed border-secondary-200 relative overflow-hidden">
+                                        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/50 pointer-events-none"></div>
+                                        <CheckCircle2 className="mx-auto text-emerald-400 mb-6 opacity-60" size={56} />
+                                        <p className="text-[12px] font-black text-secondary-400 uppercase tracking-[0.4em]">No Pending Requests</p>
                                     </div>
                                 )}
                             </div>
