@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import PortalNavigator from './PortalNavigator';
 import WebRTCCall from '../common/WebRTCCall';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -40,7 +39,6 @@ const Layout = () => {
                     </AnimatePresence>
                 </main>
             </motion.div>
-            <PortalNavigator />
             <WebRTCCall />
         </div>
     );
