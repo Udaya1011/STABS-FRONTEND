@@ -25,6 +25,7 @@ const SocketListener = () => {
 
     const [initialAlertDone, setInitialAlertDone] = useState(false);
     const [notificationSound] = useState(new Audio('/MESSAGE-RINGTONE.mp3'));
+    const [callSound] = useState(new Audio(`/custom-ringtone.mpeg?v=${Date.now()}`));
     const [soundBlocked, setSoundBlocked] = useState(false);
 
     // Audio Priming - Unlock audio on first interaction
@@ -34,14 +35,21 @@ const SocketListener = () => {
                 .then(() => {
                     notificationSound.pause();
                     notificationSound.currentTime = 0;
-                    console.log('Audio Engine Unlocked');
+                })
+                .catch(() => { });
+            
+            callSound.play()
+                .then(() => {
+                    callSound.pause();
+                    callSound.currentTime = 0;
+                    console.log('--- Socket Audio Engines Unlocked ---');
                 })
                 .catch(() => { });
             window.removeEventListener('mousedown', primeAudio);
         };
         window.addEventListener('mousedown', primeAudio);
         return () => window.removeEventListener('mousedown', primeAudio);
-    }, [notificationSound]);
+    }, [notificationSound, callSound]);
 
     useEffect(() => {
         if (!user?._id) return;
@@ -89,118 +97,121 @@ const SocketListener = () => {
             // ALWAYS add to store — Chat component displays only relevant messages
             dispatch(addMessage(message));
 
-            // Play notification sound for real incoming messages
-            notificationSound.currentTime = 0;
-            notificationSound.volume = 0.5;
-            notificationSound.play().catch(e => console.log('Message audio play failed:', e));
-
-            // Mark as read only if currently viewing this conversation
-            if (inThisChat) {
-                axios.post(`/api/messages/${senderId}/read`, {}, {
-                    headers: { Authorization: `Bearer ${user.token}` }
-                }).catch(err => console.error('Mark as read failed:', err));
-            }
-
-
-
-            // Show global notification only when NOT viewing this conversation
-            if ((message.messageType === 'call' && message.fileUrl) || !inThisChat) {
-                const toastId = toast.custom((t) => (
-                    <div
-                        className={`${t.visible ? 'animate-enter' : 'animate-leave'
-                            } max-w-md w-full bg-white shadow-premium rounded-3xl pointer-events-auto flex flex-col ring-8 ring-primary-500/10 border-2 border-primary-200 overflow-hidden cursor-pointer relative`}
-                        onClick={() => {
-                            if (message.messageType === 'call') {
-                                window.open(message.fileUrl, '_blank');
-                            } else {
-                                navigate(`/chat/${message.sender._id || message.sender}`);
-                            }
-                            toast.dismiss(t.id);
-                        }}
-                    >
-                        {message.messageType === 'call' && message.fileUrl && (
-                            <div className="absolute inset-0 bg-primary-600/5 animate-pulse pointer-events-none"></div>
-                        )}
-                        <div className="p-6 flex items-start gap-5 relative z-10">
-                            <div className="flex-shrink-0">
-                                <div className={`h-16 w-16 rounded-2xl flex items-center justify-center font-bold text-white shadow-2xl ${message.messageType === 'call' && message.fileUrl ? 'bg-primary-600 animate-bounce' : 'bg-secondary-800'}`}>
-                                    {(message.sender?.name || 'U').charAt(0)}
-                                </div>
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-[10px] font-black text-primary-600 uppercase tracking-[0.2em] mb-1">
-                                    {message.messageType === 'call' && message.fileUrl ? '⚡ Priority Direct Call' : 'New Transmission'}
-                                </p>
-                                <h4 className="text-lg font-black text-secondary-900 uppercase tracking-tight">
-                                    {message.sender?.name || 'Academic Faculty'}
-                                </h4>
-                                <p className="mt-1 text-xs font-bold text-secondary-500 line-clamp-2">
-                                    {message.content}
-                                </p>
-                            </div>
-                        </div>
-
-                        {message.messageType === 'call' && message.fileUrl ? (
-                            <div className="flex border-t border-secondary-100 bg-secondary-50/50 p-4 gap-3 relative z-10">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        window.open(message.fileUrl, '_blank');
-                                        toast.dismiss(t.id);
-                                    }}
-                                    className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-white bg-primary-600 rounded-2xl hover:bg-primary-700 transition-all shadow-xl shadow-primary-500/30 flex items-center justify-center gap-2"
-                                >
-                                    <Phone size={14} fill="white" />
-                                    Accept Call
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        toast.dismiss(t.id);
-                                    }}
-                                    className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-secondary-500 bg-white border border-secondary-200 rounded-2xl hover:bg-secondary-50 transition-all font-bold"
-                                >
-                                    Decline
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex border-t border-secondary-100 divide-x divide-secondary-100 relative z-10">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/chat/${message.sender._id || message.sender}`);
-                                        toast.dismiss(t.id);
-                                    }}
-                                    className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-primary-600 hover:bg-secondary-50 transition-all"
-                                >
-                                    Respond Now
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        toast.dismiss(t.id);
-                                    }}
-                                    className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-secondary-400 hover:text-secondary-600 hover:bg-secondary-50 transition-all"
-                                >
-                                    Ignore
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                ), { duration: message.messageType === 'call' ? 45000 : 5000 });
-
-                if (message.messageType === 'call') {
-                    activeCallToastId.current = toastId;
+            // ONLY PLAY SOUND AND SHOW TOAST IF MESSAGE IS FROM SOMEONE ELSE
+            if (senderId !== user._id.toString()) {
+                // Play appropriate sound
+                if (message.messageType === 'call' && message.fileUrl) {
+                    console.log('PRIORITY CALL: Using custom ringtone');
+                    callSound.currentTime = 0;
+                    callSound.volume = 1.0;
+                    callSound.loop = true;
+                    callSound.play().catch(e => console.error('Call audio play failed:', e));
+                } else {
+                    notificationSound.currentTime = 0;
+                    notificationSound.volume = 0.5;
+                    notificationSound.play().catch(e => console.log('Message audio play failed:', e));
                 }
 
-                if (message.messageType !== 'call') {
-                    // Fetch unread counts to update badges globally
-                    const currentCount = unreadCountsRef.current[message.sender._id || message.sender]?.count || 0;
-                    dispatch(setUnreadCount({
-                        senderId: message.sender._id || message.sender,
-                        count: currentCount + 1,
-                        lastMessageTime: message.createdAt
-                    }));
+                // Show global notification only when NOT viewing this conversation
+                if ((message.messageType === 'call' && message.fileUrl) || !inThisChat) {
+                    const toastId = toast.custom((t) => (
+                        <div
+                            className={`${t.visible ? 'animate-enter' : 'animate-leave'
+                                } max-w-md w-full bg-white shadow-premium rounded-3xl pointer-events-auto flex flex-col ring-8 ring-primary-500/10 border-2 border-primary-200 overflow-hidden cursor-pointer relative`}
+                            onClick={() => {
+                                if (message.messageType === 'call') {
+                                    window.open(message.fileUrl, '_blank');
+                                } else {
+                                    navigate(`/chat/${message.sender._id || message.sender}`);
+                                }
+                                toast.dismiss(t.id);
+                            }}
+                        >
+                            {message.messageType === 'call' && message.fileUrl && (
+                                <div className="absolute inset-0 bg-primary-600/5 animate-pulse pointer-events-none"></div>
+                            )}
+                            <div className="p-6 flex items-start gap-5 relative z-10">
+                                <div className="flex-shrink-0">
+                                    <div className={`h-16 w-16 rounded-2xl flex items-center justify-center font-bold text-white shadow-2xl ${message.messageType === 'call' && message.fileUrl ? 'bg-primary-600 animate-bounce' : 'bg-secondary-800'}`}>
+                                        {(message.sender?.name || 'U').charAt(0)}
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-[10px] font-black text-primary-600 uppercase tracking-[0.2em] mb-1">
+                                        {message.messageType === 'call' && message.fileUrl ? '⚡ Priority Direct Call' : 'New Transmission'}
+                                    </p>
+                                    <h4 className="text-lg font-black text-secondary-900 uppercase tracking-tight">
+                                        {message.sender?.name || 'Academic Faculty'}
+                                    </h4>
+                                    <p className="mt-1 text-xs font-bold text-secondary-500 line-clamp-2">
+                                        {message.content}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {message.messageType === 'call' && message.fileUrl ? (
+                                <div className="flex border-t border-secondary-100 bg-secondary-50/50 p-4 gap-3 relative z-10">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.open(message.fileUrl, '_blank');
+                                            toast.dismiss(t.id);
+                                        }}
+                                        className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-white bg-primary-600 rounded-2xl hover:bg-primary-700 transition-all shadow-xl shadow-primary-500/30 flex items-center justify-center gap-2"
+                                    >
+                                        <Phone size={14} fill="white" />
+                                        Accept Call
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            callSound.pause();
+                                            toast.dismiss(t.id);
+                                        }}
+                                        className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-secondary-500 bg-white border border-secondary-200 rounded-2xl hover:bg-secondary-50 transition-all font-bold"
+                                    >
+                                        Decline
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex border-t border-secondary-100 divide-x divide-secondary-100 relative z-10">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate(`/chat/${message.sender._id || message.sender}`);
+                                            toast.dismiss(t.id);
+                                        }}
+                                        className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-primary-600 hover:bg-secondary-50 transition-all"
+                                    >
+                                        Respond Now
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toast.dismiss(t.id);
+                                        }}
+                                        className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-secondary-400 hover:text-secondary-600 hover:bg-secondary-50 transition-all"
+                                    >
+                                        Ignore
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ), { duration: message.messageType === 'call' ? 45000 : 5000 });
+
+                    if (message.messageType === 'call') {
+                        activeCallToastId.current = toastId;
+                    }
+
+                    if (message.messageType !== 'call') {
+                        // Fetch unread counts to update badges globally
+                        const currentCount = unreadCountsRef.current[message.sender._id || message.sender]?.count || 0;
+                        dispatch(setUnreadCount({
+                            senderId: message.sender._id || message.sender,
+                            count: currentCount + 1,
+                            lastMessageTime: message.createdAt
+                        }));
+                    }
                 }
             }
         });
@@ -218,6 +229,8 @@ const SocketListener = () => {
         });
 
         socket.on('rtc-end', () => {
+            callSound.pause();
+            callSound.currentTime = 0;
             if (activeCallToastId.current) {
                 toast.dismiss(activeCallToastId.current);
                 activeCallToastId.current = null;

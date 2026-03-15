@@ -53,8 +53,12 @@ const WebRTCCall = () => {
     }, [callType]);
 
     useEffect(() => {
-        receiverRingtone.current = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3');
-        callerRingtone.current = new Audio('https://assets.mixkit.co/active_storage/sfx/1358/1358-preview.mp3');
+        const recvUrl = `/custom-ringtone.mpeg?v=${Date.now()}`;
+        const sendUrl = `/sender-ringtone.mpeg?v=${Date.now()}`;
+        console.log('STABS: Loading Ringtones - Receiver:', recvUrl, 'Sender:', sendUrl);
+        
+        receiverRingtone.current = new Audio(recvUrl);
+        callerRingtone.current = new Audio(sendUrl);
         
         receiverRingtone.current.loop = true;
         callerRingtone.current.loop = true;
