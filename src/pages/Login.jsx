@@ -8,8 +8,8 @@ import FaceScanModal from '../components/FaceScanModal';
 
 const Login = () => {
     const [formData, setFormData] = useState({
-        email: 'admin@educonnect.com',
-        password: 'adminpassword123',
+        email: '',
+        password: '',
     });
     const [showPassword, setShowPassword] = useState(false);
     const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);

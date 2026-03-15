@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_URL = '/api/auth';
 
-const user = JSON.parse(localStorage.getItem('user'));
+const user = JSON.parse(sessionStorage.getItem('user'));
 
 const initialState = {
     user: user ? user : null,
@@ -22,7 +22,7 @@ export const register = createAsyncThunk('auth/register', async (userData, thunk
         };
         const response = await axios.post(`${API_URL}/register`, cleanedData);
         if (response.data) {
-            localStorage.setItem('user', JSON.stringify(response.data));
+            sessionStorage.setItem('user', JSON.stringify(response.data));
         }
         return response.data;
     } catch (error) {
@@ -40,7 +40,7 @@ export const login = createAsyncThunk('auth/login', async (userData, thunkAPI) =
         };
         const response = await axios.post(`${API_URL}/login`, cleanedData);
         if (response.data) {
-            localStorage.setItem('user', JSON.stringify(response.data));
+            sessionStorage.setItem('user', JSON.stringify(response.data));
         }
         return response.data;
     } catch (error) {
@@ -54,7 +54,7 @@ export const loginWithFace = createAsyncThunk('auth/loginWithFace', async (faceD
     try {
         const response = await axios.post(`${API_URL}/login-face`, faceData);
         if (response.data) {
-            localStorage.setItem('user', JSON.stringify(response.data));
+            sessionStorage.setItem('user', JSON.stringify(response.data));
         }
         return response.data;
     } catch (error) {
@@ -65,7 +65,7 @@ export const loginWithFace = createAsyncThunk('auth/loginWithFace', async (faceD
 
 // Logout user
 export const logout = createAsyncThunk('auth/logout', async () => {
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('user');
 });
 
 // Update profile
@@ -79,7 +79,7 @@ export const updateProfile = createAsyncThunk('auth/updateProfile', async (userD
         };
         const response = await axios.put(`${API_URL}/profile`, userData, config);
         if (response.data) {
-            localStorage.setItem('user', JSON.stringify(response.data));
+            sessionStorage.setItem('user', JSON.stringify(response.data));
         }
         return response.data;
     } catch (error) {
@@ -118,10 +118,10 @@ export const authSlice = createSlice({
         updateUserLocally: (state, action) => {
             if (state.user && action.payload && action.payload.token) {
                  state.user = action.payload;
-                 localStorage.setItem('user', JSON.stringify(state.user));
+                 sessionStorage.setItem('user', JSON.stringify(state.user));
             } else if (state.user && action.payload) {
                  state.user = { ...state.user, ...action.payload };
-                 localStorage.setItem('user', JSON.stringify(state.user));
+                 sessionStorage.setItem('user', JSON.stringify(state.user));
             }
         }
     },
